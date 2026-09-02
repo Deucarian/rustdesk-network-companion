@@ -46,7 +46,7 @@
 
 - [ ] Add unit tests for profile loading, target mapping, and connection-target construction.
 - [ ] Add integration tests for private-server reachability checks.
-- [ ] Add GitHub Actions for build and test verification.
+- [x] Add GitHub Actions for build and test verification.
 - [ ] Publish versioned release artifacts.
 - [ ] Add screenshots and a short usage guide to the README.
 

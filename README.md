@@ -42,6 +42,17 @@ dotnet build RustDeskCompanion.csproj -c Release
 
 The executable is produced under `bin\Release\net9.0-windows\`.
 
+## Branches and automation
+
+- `develop` is the integration branch for ongoing work.
+- `main` is the production branch.
+- Pull requests targeting either branch run the Windows build check.
+- Every push to either branch produces a self-contained Windows ZIP artifact in GitHub Actions.
+
+Because this is a desktop utility, the automated deployment target is a downloadable build artifact rather than a server. Versioned public releases can be added when the project is ready for a release process.
+
+Feature ideas can be submitted through the repository's **Feature request** issue template.
+
 ## License
 
 This project is intended as an open-source companion around the RustDesk client. RustDesk itself remains under its own license and is not bundled here.

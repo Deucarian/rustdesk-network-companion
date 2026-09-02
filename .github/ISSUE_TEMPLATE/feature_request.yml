@@ -1,0 +1,52 @@
+name: Feature request
+description: Suggest an improvement to the RustDesk Network Companion.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve the companion. Please describe the user problem first, then the solution you would like to see.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: What is difficult, confusing, or missing today?
+      placeholder: I regularly need to...
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What would you like the companion to do?
+      placeholder: It would be helpful if...
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: How do you solve this today, if at all?
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Client list and navigation
+        - Network profiles and switching
+        - Tailscale integration
+        - Session safety
+        - Windows integration
+        - Packaging and releases
+        - Other
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Final checks
+      options:
+        - label: I have searched existing issues for duplicates.
+          required: true
