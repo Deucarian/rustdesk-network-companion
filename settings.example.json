@@ -1,0 +1,34 @@
+{
+  "Profiles": [
+    {
+      "Id": "public",
+      "Name": "RustDesk Public",
+      "ServerAddress": "public",
+      "PublicKey": "",
+      "RequiresPrivateNetwork": false,
+      "ProbeHost": "",
+      "ProbePort": 21116
+    },
+    {
+      "Id": "private-example",
+      "Name": "Private RustDesk",
+      "ServerAddress": "private-server.example:21116",
+      "PublicKey": "PASTE_PUBLIC_RUSTDESK_SERVER_KEY_HERE",
+      "RequiresPrivateNetwork": true,
+      "ProbeHost": "private-server.example",
+      "ProbePort": 21116
+    }
+  ],
+  "Targets": [
+    {
+      "Name": "Example public client",
+      "RustDeskId": "PUBLIC_RUSTDESK_ID",
+      "ProfileId": "public"
+    },
+    {
+      "Name": "Example private client",
+      "RustDeskId": "PRIVATE_RUSTDESK_ID",
+      "ProfileId": "private-example"
+    }
+  ]
+}
