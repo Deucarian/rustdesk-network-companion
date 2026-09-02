@@ -59,7 +59,7 @@ The latest public release is always available from the stable link below:
 
 <https://github.com/Deucarian/rustdesk-network-companion/releases/latest>
 
-Release files use versioned names such as `RustDeskHop-v0.1.0-win-x64.exe` and `RustDeskHop-v0.1.0-win-x64.zip`. Releases are created automatically when a version tag such as `v0.1.0` is pushed.
+Release files use versioned names such as `RustDeskHop-v0.1.0-win-x64.exe` and `RustDeskHop-v0.1.0-win-x64.zip`. Stable releases are created automatically when a version tag such as `v0.1.0` is pushed; tags such as `v0.1.0-beta.1` become prereleases.
 
 ## License
 

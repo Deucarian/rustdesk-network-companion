@@ -55,11 +55,23 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         shell: pwsh
-        run: >-
-          gh release create $env:GITHUB_REF_NAME
-          $env:RELEASE_EXE
-          $env:RELEASE_ZIP
-          SHA256SUMS.txt
-          --title "RustDeskHop $env:GITHUB_REF_NAME"
-          --generate-notes
-          --latest
+        run: |
+          $tag = $env:GITHUB_REF_NAME
+          $releaseArgs = @(
+            'release', 'create', $tag,
+            $env:RELEASE_EXE,
+            $env:RELEASE_ZIP,
+            'SHA256SUMS.txt',
+            '--title', "RustDeskHop $tag",
+            '--generate-notes'
+          )
+
+          if ($tag -match '-') {
+            $releaseArgs += '--prerelease'
+            $releaseArgs += '--latest=false'
+          }
+          else {
+            $releaseArgs += '--latest'
+          }
+
+          gh @releaseArgs
