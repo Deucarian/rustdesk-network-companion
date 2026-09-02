@@ -1,0 +1,77 @@
+name: Release RustDeskHop
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: release
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out tagged source
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Publish self-contained Windows build
+        run: >-
+          dotnet publish RustDeskCompanion.csproj
+          --configuration Release
+          --runtime win-x64
+          --self-contained true
+          --property:PublishSingleFile=true
+          --property:IncludeNativeLibrariesForSelfExtract=true
+          --property:DebugType=None
+          --property:DebugSymbols=false
+          --output publish
+
+      - name: Create versioned release files
+        shell: pwsh
+        run: |
+          $tag = $env:GITHUB_REF_NAME
+          $version = $tag.TrimStart('v')
+          $exeName = "RustDeskHop-v$version-win-x64.exe"
+          $zipName = "RustDeskHop-v$version-win-x64.zip"
+
+          Copy-Item "publish\RustDeskHop.exe" $exeName
+          Compress-Archive -Path "publish\*" -DestinationPath $zipName
+
+          $hash = (Get-FileHash $zipName -Algorithm SHA256).Hash
+          "$hash  $zipName" | Set-Content SHA256SUMS.txt
+
+          "RELEASE_EXE=$exeName" >> $env:GITHUB_ENV
+          "RELEASE_ZIP=$zipName" >> $env:GITHUB_ENV
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          $tag = $env:GITHUB_REF_NAME
+          $releaseArgs = @(
+            'release', 'create', $tag,
+            $env:RELEASE_EXE,
+            $env:RELEASE_ZIP,
+            'SHA256SUMS.txt',
+            '--title', "RustDeskHop $tag",
+            '--generate-notes'
+          )
+
+          if ($tag -match '-') {
+            $releaseArgs += '--prerelease'
+            $releaseArgs += '--latest=false'
+          }
+          else {
+            $releaseArgs += '--latest'
+          }
+
+          gh @releaseArgs
