@@ -1,4 +1,4 @@
-# RustDesk Network Companion
+# RustDeskHop — RustDesk Network Companion
 
 RustDesk is excellent at connecting to devices, but it becomes awkward when one operator regularly uses more than one RustDesk network—for example, RustDesk's public network and a private self-hosted server.
 
@@ -52,6 +52,14 @@ The executable is produced under `bin\Release\net9.0-windows\`.
 Because this is a desktop utility, the automated deployment target is a downloadable build artifact rather than a server. Versioned public releases can be added when the project is ready for a release process.
 
 Feature ideas can be submitted through the repository's **Feature request** issue template.
+
+## Downloads
+
+The latest public release is always available from the stable link below:
+
+<https://github.com/Deucarian/rustdesk-network-companion/releases/latest>
+
+Release files use versioned names such as `RustDeskHop-v0.1.0-win-x64.exe` and `RustDeskHop-v0.1.0-win-x64.zip`. Releases are created automatically when a version tag such as `v0.1.0` is pushed.
 
 ## License
 

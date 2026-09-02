@@ -280,7 +280,7 @@ internal sealed class MainForm : Form
 
     public MainForm()
     {
-        Text = "RustDesk Network Switcher";
+        Text = "RustDeskHop — RustDesk Network Companion";
         StartPosition = FormStartPosition.CenterScreen;
         MinimumSize = new Size(760, 460);
         Size = new Size(900, 560);
