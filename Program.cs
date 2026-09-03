@@ -9,8 +9,14 @@ namespace Simultria.RustDeskCompanion;
 internal static class Program
 {
     [STAThread]
-    private static void Main()
+    private static void Main(string[] args)
     {
+        if (RustDeskPublicProfileSetup.TryHandleCommand(args, out var exitCode))
+        {
+            Environment.ExitCode = exitCode;
+            return;
+        }
+
         ApplicationConfiguration.Initialize();
         Application.Run(new MainForm());
     }
@@ -148,10 +154,11 @@ internal static class RustDeskConfigReader
 {
     public static string? ReadConfiguredServer()
     {
-        var path = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "RustDesk", "config", "RustDesk2.toml");
+        return ReadConfiguredServer(RustDeskPaths.UserConfigPath);
+    }
 
+    internal static string? ReadConfiguredServer(string path)
+    {
         if (!File.Exists(path))
         {
             return null;
@@ -160,14 +167,16 @@ internal static class RustDeskConfigReader
         try
         {
             var text = File.ReadAllText(path);
-            var custom = Regex.Match(text, "custom-rendezvous-server\\s*=\\s*['\"](?<value>[^'\"]+)", RegexOptions.IgnoreCase);
-            if (custom.Success)
+            // The top-level value is the effective server in current RustDesk builds.
+            // Prefer it over a stale custom-rendezvous-server option when both exist.
+            var rendezvous = Regex.Match(text, "^rendezvous_server\\s*=\\s*['\"](?<value>[^'\"]+)", RegexOptions.Multiline | RegexOptions.IgnoreCase);
+            if (rendezvous.Success && !string.IsNullOrWhiteSpace(rendezvous.Groups["value"].Value))
             {
-                return custom.Groups["value"].Value.Trim();
+                return rendezvous.Groups["value"].Value.Trim();
             }
 
-            var rendezvous = Regex.Match(text, "^rendezvous_server\\s*=\\s*['\"](?<value>[^'\"]+)", RegexOptions.Multiline | RegexOptions.IgnoreCase);
-            return rendezvous.Success ? rendezvous.Groups["value"].Value.Trim() : null;
+            var custom = Regex.Match(text, "custom-rendezvous-server\\s*=\\s*['\"](?<value>[^'\"]+)", RegexOptions.IgnoreCase);
+            return custom.Success ? custom.Groups["value"].Value.Trim() : null;
         }
         catch
         {
@@ -180,7 +189,8 @@ internal static class RustDeskConfigReader
         var configured = ReadConfiguredServer();
         if (string.IsNullOrWhiteSpace(configured))
         {
-            return settings.Profiles.FirstOrDefault();
+            return settings.Profiles.FirstOrDefault(profile => profile.IsPublic)
+                ?? settings.Profiles.FirstOrDefault();
         }
 
         if (string.Equals(configured, "public", StringComparison.OrdinalIgnoreCase)
@@ -276,6 +286,7 @@ internal sealed class MainForm : Form
     private readonly DataGridView targetsGrid = new();
     private readonly Label currentNetworkLabel = new();
     private readonly Label statusLabel = new();
+    private readonly Button connectButton = new() { Text = "Connect now", AutoSize = true, Padding = new Padding(10, 4, 10, 4) };
     private AppSettings settings = null!;
 
     public MainForm()
@@ -293,6 +304,7 @@ internal sealed class MainForm : Form
             ConfigStore.Save(settings);
             RefreshTargets();
         };
+        Activated += (_, _) => RefreshNetworkStatus();
     }
 
     private void BuildUi()
@@ -332,9 +344,24 @@ internal sealed class MainForm : Form
         targetsGrid.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
         targetsGrid.AutoGenerateColumns = false;
         targetsGrid.RowHeadersVisible = false;
-        targetsGrid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "Client", DataPropertyName = "Name", Width = 300 });
-        targetsGrid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "RustDesk ID", DataPropertyName = "RustDeskId", Width = 150 });
-        targetsGrid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "Network", DataPropertyName = "ProfileName", AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill });
+        targetsGrid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "Client", DataPropertyName = "Name", Width = 300, SortMode = DataGridViewColumnSortMode.NotSortable });
+        targetsGrid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "RustDesk ID", DataPropertyName = "RustDeskId", Width = 150, SortMode = DataGridViewColumnSortMode.NotSortable });
+        targetsGrid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "Network", DataPropertyName = "ProfileName", AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill, SortMode = DataGridViewColumnSortMode.NotSortable });
+        targetsGrid.CellDoubleClick += async (_, e) =>
+        {
+            if (e.RowIndex >= 0)
+            {
+                await ConnectSelectedAsync();
+            }
+        };
+        targetsGrid.KeyDown += async (_, e) =>
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                e.SuppressKeyPress = true;
+                await ConnectSelectedAsync();
+            }
+        };
         layout.Controls.Add(targetsGrid, 0, 2);
 
         var buttons = new FlowLayoutPanel
@@ -345,7 +372,6 @@ internal sealed class MainForm : Form
             Margin = new Padding(0, 12, 0, 8),
         };
 
-        var connectButton = new Button { Text = "Connect", AutoSize = true, Padding = new Padding(10, 4, 10, 4) };
         connectButton.Click += async (_, _) => await ConnectSelectedAsync();
         buttons.Controls.Add(connectButton);
 
@@ -372,10 +398,7 @@ internal sealed class MainForm : Form
 
     private void RefreshTargets()
     {
-        var current = RustDeskConfigReader.DetectDefaultProfile(settings);
-        currentNetworkLabel.Text = current is null
-            ? "Current RustDesk network: unknown"
-            : $"Current RustDesk network: {current.Name}";
+        RefreshNetworkStatus();
 
         targetsGrid.DataSource = settings.Targets
             .Select(target => new
@@ -386,11 +409,29 @@ internal sealed class MainForm : Form
             })
             .ToList();
 
-        statusLabel.Text = $"Settings: {ConfigStore.FilePath}";
+        statusLabel.Text = "Ready — connections are routed per client and existing sessions stay open.";
+    }
+
+    private void RefreshNetworkStatus()
+    {
+        if (settings is null)
+        {
+            return;
+        }
+
+        var current = RustDeskConfigReader.DetectDefaultProfile(settings);
+        currentNetworkLabel.Text = current is null
+            ? "RustDesk default: unknown • Saved clients still use their assigned route"
+            : $"RustDesk default: {current.Name} • Saved clients use their assigned route";
     }
 
     private async Task ConnectSelectedAsync()
     {
+        if (!connectButton.Enabled)
+        {
+            return;
+        }
+
         if (targetsGrid.SelectedRows.Count == 0)
         {
             MessageBox.Show(this, "Select a client first.", "RustDesk Network Switcher", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -411,78 +452,123 @@ internal sealed class MainForm : Form
             return;
         }
 
-        var current = RustDeskConfigReader.DetectDefaultProfile(settings);
-        if (current is not null && !string.Equals(current.Id, profile.Id, StringComparison.OrdinalIgnoreCase))
-        {
-            var result = MessageBox.Show(
-                this,
-                $"{target.Name} uses “{profile.Name}”, but RustDesk is currently configured for “{current.Name}”.\n\nClose visible RustDesk windows from the other network and connect?",
-                "Switch RustDesk network?",
-                MessageBoxButtons.YesNo,
-                MessageBoxIcon.Question);
-
-            if (result != DialogResult.Yes)
-            {
-                return;
-            }
-
-            if (RustDeskSessions.HasVisibleWindows())
-            {
-                RustDeskSessions.CloseVisibleWindows();
-            }
-        }
-
-        if (profile.RequiresPrivateNetwork)
-        {
-            statusLabel.Text = $"Checking access to {profile.Name}…";
-            var reachable = await NetworkProbe.CanReachAsync(profile);
-            if (!reachable)
-            {
-                statusLabel.Text = $"{profile.Name} is not reachable.";
-                MessageBox.Show(
-                    this,
-                    $"{profile.Name} is not reachable. Connect Tailscale on this device, then try again.\n\nRustDesk will not be launched until the private server can be reached.",
-                    "Private network unavailable",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Warning);
-                return;
-            }
-        }
-
-        var rustDeskPath = RustDeskLocator.Find();
-        if (rustDeskPath is null)
-        {
-            MessageBox.Show(this, "RustDesk was not found in the usual installation locations.", "RustDesk not found", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            return;
-        }
-
-        var connectTarget = BuildConnectionTarget(target, profile);
+        connectButton.Enabled = false;
         try
         {
-            var startInfo = new ProcessStartInfo(rustDeskPath)
+            var current = RustDeskConfigReader.DetectDefaultProfile(settings);
+            if (current is not null && !string.Equals(current.Id, profile.Id, StringComparison.OrdinalIgnoreCase))
             {
-                UseShellExecute = true,
-            };
-            startInfo.ArgumentList.Add("--connect");
-            startInfo.ArgumentList.Add(connectTarget);
-            Process.Start(startInfo);
+                var result = MessageBox.Show(
+                    this,
+                    $"{target.Name} uses “{profile.Name}”, while RustDesk's default is “{current.Name}”.\n\nRustDeskHop will route only this new connection through “{profile.Name}”. Existing sessions stay open.\n\nConnect now?",
+                    "Route through another RustDesk network?",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question);
+
+                if (result != DialogResult.Yes)
+                {
+                    statusLabel.Text = "Connection cancelled — existing sessions were not changed.";
+                    return;
+                }
+            }
+
+            if (profile.RequiresPrivateNetwork)
+            {
+                statusLabel.Text = $"Checking access to {profile.Name}…";
+                var reachable = await NetworkProbe.CanReachAsync(profile);
+                if (!reachable && !TailscaleState.IsRunning() && TailscaleState.TryStart())
+                {
+                    statusLabel.Text = "Starting Tailscale and retrying…";
+                    await Task.Delay(2_000);
+                    reachable = await NetworkProbe.CanReachAsync(profile);
+                }
+
+                if (!reachable)
+                {
+                    statusLabel.Text = $"{profile.Name} is not reachable.";
+                    var explanation = TailscaleState.IsRunning()
+                        ? "Tailscale is running, but the private RustDesk server did not answer. The server device may be offline or disconnected from Tailscale."
+                        : "Tailscale is not running. Open and connect Tailscale, then try again.";
+                    MessageBox.Show(
+                        this,
+                        $"{profile.Name} is not reachable.\n\n{explanation}\n\nRustDesk was not launched.",
+                        "Private network unavailable",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+                    return;
+                }
+            }
+
+            var rustDeskPath = RustDeskLocator.Find();
+            if (rustDeskPath is null)
+            {
+                MessageBox.Show(this, "RustDesk was not found in the usual installation locations.", "RustDesk not found", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            if (profile.IsPublic && !await EnsurePublicLoginAsync(rustDeskPath, current))
+            {
+                return;
+            }
+
+            var connectTarget = ConnectionTargetBuilder.Build(target, profile);
+            RustDeskLauncher.Connect(rustDeskPath, connectTarget);
             statusLabel.Text = $"Connecting to {target.Name} via {profile.Name}.";
         }
         catch (Exception ex)
         {
             MessageBox.Show(this, $"RustDesk could not be started.\n\n{ex.Message}", "Connection failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
+        finally
+        {
+            connectButton.Enabled = true;
+            RefreshNetworkStatus();
+        }
     }
 
-    private static string BuildConnectionTarget(TargetDefinition target, ServerProfile profile)
+    private async Task<bool> EnsurePublicLoginAsync(string rustDeskPath, ServerProfile? current)
     {
-        if (profile.IsPublic)
+        if (RustDeskAccountState.HasLoginToken())
         {
-            return $"{target.RustDeskId}@public";
+            return true;
         }
 
-        var keyPart = string.IsNullOrWhiteSpace(profile.PublicKey) ? "" : $"?key={profile.PublicKey}";
-        return $"{target.RustDeskId}@{profile.ServerAddress}{keyPart}";
+        if (current is null || !current.IsPublic)
+        {
+            var result = MessageBox.Show(
+                this,
+                "RustDesk's public network needs a one-time browser sign-in. To make the Google/GitHub buttons available, RustDeskHop must make the public network RustDesk's default. Saved private clients will still use their own direct route.\n\nVisible RustDesk sessions will close, and Windows may ask for administrator approval. Continue?",
+                "Prepare public RustDesk sign-in?",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
+
+            if (result != DialogResult.Yes)
+            {
+                statusLabel.Text = "Public sign-in setup cancelled.";
+                return false;
+            }
+
+            RustDeskSessions.CloseVisibleWindows();
+            await Task.Delay(750);
+            statusLabel.Text = "Preparing RustDesk's public sign-in…";
+            var setup = await RustDeskPublicProfileSetup.RequestAsync();
+            if (!setup.Success)
+            {
+                MessageBox.Show(this, setup.Message, "Public sign-in setup failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                statusLabel.Text = "Public sign-in setup failed.";
+                return false;
+            }
+        }
+
+        using var signIn = new PublicSignInForm(rustDeskPath);
+        if (signIn.ShowDialog(this) != DialogResult.OK)
+        {
+            statusLabel.Text = "Waiting for RustDesk public sign-in.";
+            return false;
+        }
+
+        statusLabel.Text = "Public sign-in detected. Continuing connection…";
+        return true;
     }
 
     private void AddClient()
