@@ -29,6 +29,43 @@ The intended workflow is:
 
 After the one-time RustDesk public-account setup, this is a single selection and confirmation. If public sign-in has never been completed, RustDeskHop can prepare the public profile with Windows administrator approval, open RustDesk, wait for the user to finish the browser login, and then continue the original connection automatically. Backups of any RustDesk configuration touched by this recovery flow are kept in a `RustDeskHop Backups` folder beside the original configuration.
 
+## How to use RustDeskHop
+
+For normal day-to-day use:
+
+1. Open **RustDeskHop**.
+2. Select the computer you want to reach.
+3. Check that the displayed network is the one you expect.
+4. Click **Connect now**.
+5. Approve the route confirmation if one appears.
+
+That is the complete switching workflow. RustDeskHop routes the new connection through the network assigned to that computer. You do not need to edit RustDesk's server settings, restart RustDesk, or manually switch between public and private servers. Existing sessions on other networks stay open.
+
+### One-time setup
+
+Before the first connection from a particular PC:
+
+- Install and start RustDesk.
+- Sign in to RustDesk's public service when that PC will initiate public connections. RustDesk supports providers such as Google and GitHub.
+- Enter the remote computer's password on the first connection and let RustDesk remember it if appropriate for that device.
+- Start Tailscale, another VPN, or the required network route before using a private profile.
+- Make sure the destination computer and its RustDesk server are online.
+
+After those one-time steps, future connections should require only selecting the computer and clicking **Connect now**.
+
+### Incoming connections to this PC
+
+RustDeskHop controls the route used by **new outgoing connections**. It does not change this PC's incoming/default RustDesk registration during normal use. This means the PC can remain available through RustDesk's public service while it opens a separate connection through a private server.
+
+For reliable unattended incoming access, keep the RustDesk background service installed and running, configure a permanent password, and give the connecting user this PC's RustDesk ID. The controlling computer must be signed in when RustDesk's public service requires it. RustDeskHop does not store remote-desktop passwords or account credentials.
+
+### Troubleshooting
+
+- **Public connection asks for login:** complete RustDesk's browser sign-in once, then retry from RustDeskHop.
+- **Private server is unreachable:** confirm the required VPN or Tailscale connection is active and the server is online.
+- **Password prompt appears:** enter the remote computer's password and choose RustDesk's remember option if desired.
+- **Wrong network is shown:** use **Manage networks** or edit the saved client assignment before connecting.
+
 ## Configuration
 
 On first run, use **Manage networks** and **Add client** to configure the profiles and IDs for your environment. Settings are stored in:
