@@ -28,6 +28,9 @@ jobs:
         with:
           dotnet-version: 9.0.x
 
+      - name: Test RustDesk routing and recovery logic
+        run: dotnet test tests\RustDeskHop.Tests\RustDeskHop.Tests.csproj --configuration Release
+
       - name: Publish self-contained Windows build
         run: >-
           dotnet publish RustDeskCompanion.csproj
@@ -41,7 +44,8 @@ jobs:
       - name: Package build
         shell: pwsh
         run: |
-          $branch = "${{ github.ref_name }}"
+          $branch = "${{ github.head_ref || github.ref_name }}"
+          $branch = $branch -replace '[^A-Za-z0-9._-]', '-'
           $archive = "rustdesk-network-companion-$branch-${{ github.run_number }}.zip"
           Compress-Archive -Path publish\* -DestinationPath $archive
 

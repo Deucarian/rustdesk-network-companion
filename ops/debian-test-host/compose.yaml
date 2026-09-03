@@ -1,0 +1,32 @@
+name: rustdeskhop-private-rustdesk
+
+services:
+  hbbs:
+    image: docker.io/rustdesk/rustdesk-server:1.1.16
+    container_name: rustdeskhop-hbbs
+    command: hbbs -r 100.108.6.62:21117 -k _
+    volumes:
+      - ./data:/root
+    ports:
+      - "100.108.6.62:21115:21115/tcp"
+      - "100.108.6.62:21116:21116/tcp"
+      - "100.108.6.62:21116:21116/udp"
+    restart: unless-stopped
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  hbbr:
+    image: docker.io/rustdesk/rustdesk-server:1.1.16
+    container_name: rustdeskhop-hbbr
+    command: hbbr
+    volumes:
+      - ./data:/root
+    ports:
+      - "100.108.6.62:21117:21117/tcp"
+    restart: unless-stopped
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"

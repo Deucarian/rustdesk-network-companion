@@ -5,10 +5,14 @@
     <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <AssemblyName>SimultriaRustDeskCompanion</AssemblyName>
+    <AssemblyName>RustDeskHop</AssemblyName>
     <RootNamespace>Simultria.RustDeskCompanion</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
     <None Update="settings.local.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Remove="tests\**\*.cs" />
+    <None Remove="tests\**\*" />
   </ItemGroup>
 </Project>
