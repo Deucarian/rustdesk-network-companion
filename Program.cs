@@ -40,6 +40,8 @@ internal sealed class ServerProfile
 
     [JsonIgnore]
     public bool IsPublic => string.Equals(ServerAddress.Trim(), "public", StringComparison.OrdinalIgnoreCase);
+
+    public override string ToString() => Name;
 }
 
 internal sealed class TargetDefinition
@@ -711,24 +713,48 @@ internal sealed class ProfilesForm : Form
         profiles = source.Select(Clone).ToList();
         Text = "Manage RustDesk networks";
         StartPosition = FormStartPosition.CenterParent;
-        MinimumSize = new Size(720, 470);
-        Size = new Size(800, 520);
+        MinimumSize = new Size(900, 560);
+        Size = new Size(980, 620);
         Font = new Font("Segoe UI", 10F);
 
-        var split = new SplitContainer { Dock = DockStyle.Fill, SplitterDistance = 230, Padding = new Padding(10) };
+        var split = new SplitContainer
+        {
+            Dock = DockStyle.Fill,
+            Orientation = Orientation.Vertical,
+            FixedPanel = FixedPanel.Panel1,
+            SplitterWidth = 6,
+            Padding = new Padding(12),
+        };
+        split.Size = ClientSize;
+        split.Panel1MinSize = 210;
+        split.Panel2MinSize = 500;
+        split.SplitterDistance = 245;
+
         profileList.Dock = DockStyle.Fill;
         profileList.DisplayMember = nameof(ServerProfile.Name);
         profileList.SelectedIndexChanged += (_, _) => LoadSelected();
         split.Panel1.Controls.Add(profileList);
 
-        var editor = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(10), ColumnCount = 2, RowCount = 8 };
-        editor.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 165));
+        var editor = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            Padding = new Padding(12),
+            ColumnCount = 2,
+            RowCount = 8,
+            GrowStyle = TableLayoutPanelGrowStyle.FixedSize,
+        };
+        editor.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150));
         editor.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        for (var row = 0; row < 6; row++) editor.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        editor.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        editor.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+
         AddRow(editor, 0, "Profile name", nameBox);
         AddRow(editor, 1, "Server address", addressBox);
         AddRow(editor, 2, "Public key", keyBox);
         AddRow(editor, 3, "Probe host", probeHostBox);
         AddRow(editor, 4, "Probe port", probePortBox);
+        privateNetworkBox.Margin = new Padding(3, 10, 3, 10);
         editor.Controls.Add(privateNetworkBox, 0, 5);
         editor.SetColumnSpan(privateNetworkBox, 2);
 
@@ -736,13 +762,29 @@ internal sealed class ProfilesForm : Form
         {
             Text = "Use “public” for RustDesk’s public network. Private profiles use the ID server address and its public key.",
             AutoSize = true,
+            Dock = DockStyle.Top,
             ForeColor = Color.DimGray,
-            MaximumSize = new Size(500, 0),
+            Margin = new Padding(3, 8, 3, 12),
         };
         editor.Controls.Add(hint, 0, 6);
         editor.SetColumnSpan(hint, 2);
 
-        var buttons = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.LeftToRight, AutoSize = true };
+        void UpdateHintWidth()
+        {
+            var availableWidth = Math.Max(240, editor.ClientSize.Width - editor.Padding.Horizontal - hint.Margin.Horizontal);
+            hint.MaximumSize = new Size(availableWidth, 0);
+        }
+
+        editor.SizeChanged += (_, _) => UpdateHintWidth();
+
+        var buttons = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = true,
+            AutoSize = true,
+            Margin = new Padding(0, 8, 0, 0),
+        };
         var add = new Button { Text = "New", AutoSize = true };
         add.Click += (_, _) => NewProfile();
         buttons.Controls.Add(add);
@@ -761,8 +803,8 @@ internal sealed class ProfilesForm : Form
         Controls.Add(split);
         Shown += (_, _) =>
         {
-            profileList.DataSource = profiles;
-            if (profiles.Count > 0) profileList.SelectedIndex = 0;
+            UpdateHintWidth();
+            RebindProfiles(profiles.Count > 0 ? 0 : -1);
         };
     }
 
@@ -783,9 +825,7 @@ internal sealed class ProfilesForm : Form
     {
         var profile = new ServerProfile { Name = "New network", ServerAddress = "", RequiresPrivateNetwork = true };
         profiles.Add(profile);
-        profileList.DataSource = null;
-        profileList.DataSource = profiles;
-        profileList.SelectedIndex = profiles.Count - 1;
+        RebindProfiles(profiles.Count - 1);
     }
 
     private void SaveSelected()
@@ -804,7 +844,7 @@ internal sealed class ProfilesForm : Form
         profile.RequiresPrivateNetwork = privateNetworkBox.Checked;
         profile.ProbeHost = probeHostBox.Text.Trim();
         profile.ProbePort = (int)probePortBox.Value;
-        profileList.Refresh();
+        RebindProfiles(selectedIndex);
     }
 
     private void DeleteSelected()
@@ -818,9 +858,23 @@ internal sealed class ProfilesForm : Form
 
         if (MessageBox.Show(this, $"Delete “{profiles[selectedIndex].Name}”? Clients using it will need another profile.", "Delete profile", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
         profiles.RemoveAt(selectedIndex);
-        profileList.DataSource = null;
-        profileList.DataSource = profiles;
-        if (profiles.Count > 0) profileList.SelectedIndex = Math.Min(selectedIndex, profiles.Count - 1);
+        RebindProfiles(profiles.Count > 0 ? Math.Min(selectedIndex, profiles.Count - 1) : -1);
+    }
+
+    private void RebindProfiles(int index)
+    {
+        profileList.BeginUpdate();
+        try
+        {
+            profileList.DataSource = null;
+            profileList.DisplayMember = nameof(ServerProfile.Name);
+            profileList.DataSource = profiles;
+            profileList.SelectedIndex = index >= 0 && index < profiles.Count ? index : -1;
+        }
+        finally
+        {
+            profileList.EndUpdate();
+        }
     }
 
     private static ServerProfile Clone(ServerProfile p) => new()

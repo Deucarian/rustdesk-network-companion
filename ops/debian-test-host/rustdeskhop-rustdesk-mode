@@ -1,0 +1,192 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+
+readonly SERVER_HOST="${RUSTDESKHOP_SERVER_HOST:-100.108.6.62}"
+readonly ID_SERVER="${SERVER_HOST}:21116"
+readonly RELAY_SERVER="${SERVER_HOST}:21117"
+readonly KEY_FILE="${RUSTDESKHOP_KEY_FILE:-/opt/rustdeskhop/rustdesk-server/data/id_ed25519.pub}"
+readonly STATE_DIR="/var/lib/rustdeskhop/rustdesk-client"
+readonly MODE_FILE="${STATE_DIR}/active-mode"
+
+usage() {
+  echo "Usage: sudo rustdeskhop-rustdesk-mode public|private|status"
+}
+
+require_root() {
+  if [[ ${EUID} -ne 0 ]]; then
+    echo "This command must run as root." >&2
+    exit 1
+  fi
+}
+
+find_configs() {
+  find \
+    /root/.config/rustdesk \
+    /home/joris/.config/rustdesk \
+    /var/lib/gdm3/.config/rustdesk \
+    /etc/rustdesk \
+    -maxdepth 1 -type f -name RustDesk2.toml -print 2>/dev/null | sort -u
+}
+
+show_status() {
+  local configured_mode="unknown"
+  if [[ -f ${MODE_FILE} ]]; then
+    configured_mode=$(<"${MODE_FILE}")
+  fi
+
+  echo "Configured mode: ${configured_mode}"
+  echo "RustDesk service: $(systemctl is-active rustdesk 2>/dev/null || true)"
+  echo "Private server: ${ID_SERVER}"
+
+  local file
+  while IFS= read -r file; do
+    echo "Config: ${file}"
+    sed -n -E "/^[[:space:]]*(rendezvous_server|custom-rendezvous-server|relay-server|api-server|key)[[:space:]]*=/p" "${file}" || true
+  done < <(find_configs)
+}
+
+rewrite_config() {
+  local file=$1
+  local mode=$2
+  local public_key=$3
+  local directory temporary
+  directory=$(dirname "${file}")
+  temporary=$(mktemp "${directory}/.RustDesk2.toml.rustdeskhop.XXXXXX")
+
+  awk \
+    -v mode="${mode}" \
+    -v id_server="${ID_SERVER}" \
+    -v relay_server="${RELAY_SERVER}" \
+    -v public_key="${public_key}" '
+      function emit_private_settings() {
+        if (emitted) {
+          return
+        }
+        emitted = 1
+        if (mode == "private") {
+          print "custom-rendezvous-server = \047" id_server "\047"
+          print "relay-server = \047" relay_server "\047"
+          print "key = \047" public_key "\047"
+        }
+      }
+
+      BEGIN {
+        in_options = 0
+        saw_options = 0
+        emitted = 0
+      }
+
+      /^[[:space:]]*(rendezvous_server|custom-rendezvous-server|relay-server|api-server|key)[[:space:]]*=/ {
+        next
+      }
+
+      /^[[:space:]]*\[options\][[:space:]]*$/ {
+        if (in_options) {
+          emit_private_settings()
+        }
+        print
+        in_options = 1
+        saw_options = 1
+        next
+      }
+
+      /^[[:space:]]*\[[^]]+\][[:space:]]*$/ {
+        if (in_options) {
+          emit_private_settings()
+        }
+        in_options = 0
+        print
+        next
+      }
+
+      { print }
+
+      END {
+        if (in_options) {
+          emit_private_settings()
+        } else if (!saw_options && mode == "private") {
+          print ""
+          print "[options]"
+          emit_private_settings()
+        }
+      }
+    ' "${file}" > "${temporary}"
+
+  chown --reference="${file}" "${temporary}"
+  chmod --reference="${file}" "${temporary}"
+  mv -f "${temporary}" "${file}"
+}
+
+switch_mode() {
+  local mode=$1
+  local public_key=""
+
+  require_root
+  install -d -m 700 "${STATE_DIR}/backups"
+
+  if [[ ${mode} == private ]]; then
+    if [[ ! -s ${KEY_FILE} ]]; then
+      echo "The private server key does not exist at ${KEY_FILE}." >&2
+      exit 1
+    fi
+    public_key=$(tr -d '\r\n' < "${KEY_FILE}")
+  fi
+
+  mapfile -t configs < <(find_configs)
+  if [[ ${#configs[@]} -eq 0 ]]; then
+    echo "No RustDesk2.toml files were found." >&2
+    exit 1
+  fi
+
+  local timestamp backup_dir file source
+  timestamp=$(date -u +%Y%m%d-%H%M%S)
+  backup_dir="${STATE_DIR}/backups/${timestamp}-${mode}"
+  install -d -m 700 "${backup_dir}"
+
+  for file in "${configs[@]}"; do
+    install -d -m 700 "${backup_dir}$(dirname "${file}")"
+    cp -a "${file}" "${backup_dir}${file}"
+  done
+
+  rollback() {
+    echo "Switch failed; restoring RustDesk configuration from ${backup_dir}." >&2
+    for file in "${configs[@]}"; do
+      source="${backup_dir}${file}"
+      if [[ -f ${source} ]]; then
+        cp -a "${source}" "${file}"
+      fi
+    done
+    systemctl start rustdesk >/dev/null 2>&1 || true
+  }
+  trap rollback ERR
+
+  systemctl stop rustdesk
+  for file in "${configs[@]}"; do
+    rewrite_config "${file}" "${mode}" "${public_key}"
+  done
+  systemctl start rustdesk
+  systemctl is-active --quiet rustdesk
+
+  printf '%s\n' "${mode}" > "${MODE_FILE}"
+  chmod 600 "${MODE_FILE}"
+  trap - ERR
+
+  echo "RustDesk client switched to ${mode} mode."
+  echo "Backup: ${backup_dir}"
+  show_status
+}
+
+case "${1:-}" in
+  public|private)
+    switch_mode "$1"
+    ;;
+  status)
+    require_root
+    show_status
+    ;;
+  *)
+    usage >&2
+    exit 2
+    ;;
+esac

@@ -8,6 +8,14 @@ namespace RustDeskHop.Tests;
 public sealed class RustDeskIntegrationTests
 {
     [Fact]
+    public void ServerProfileDisplaysItsFriendlyName()
+    {
+        var profile = new ServerProfile { Name = "Office private network" };
+
+        Assert.Equal("Office private network", profile.ToString());
+    }
+
+    [Fact]
     public void BuildsPublicConnectionTarget()
     {
         var target = new TargetDefinition { RustDeskId = "123456789" };

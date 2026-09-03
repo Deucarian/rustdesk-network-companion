@@ -2,3 +2,4 @@ bin/
 obj/
 artifacts/
 settings.local.json
+ops/debian-test-host/data/
