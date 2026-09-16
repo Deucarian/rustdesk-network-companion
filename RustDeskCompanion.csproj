@@ -7,9 +7,11 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>RustDeskHop</AssemblyName>
     <RootNamespace>Simultria.RustDeskCompanion</RootNamespace>
+    <PackageLicenseExpression>GPL-3.0-only</PackageLicenseExpression>
   </PropertyGroup>
   <ItemGroup>
     <None Update="settings.local.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="LICENSE;README.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
   </ItemGroup>
   <ItemGroup>
     <Compile Remove="tests\**\*.cs" />
