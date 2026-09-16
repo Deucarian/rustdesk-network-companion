@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="Assets/RustDeskHop.png" alt="RustDeskHop rabbit icon" width="144" height="144">
+</p>
+
 # RustDeskHop — RustDesk Network Companion
 
 RustDeskHop is a free, open-source, independent companion for RustDesk, licensed under [GNU GPLv3](LICENSE) (`GPL-3.0-only`). It is not affiliated with or endorsed by the RustDesk project.
@@ -86,6 +90,14 @@ dotnet test tests\RustDeskHop.Tests\RustDeskHop.Tests.csproj -c Release
 ```
 
 The executable is produced under `bin\Release\net9.0-windows\`.
+
+### Application icon
+
+The approved rabbit artwork is used by the executable, taskbar, all application windows, and this README. The PNG and multi-resolution Windows ICO live in `Assets/` and are embedded in the application, so the standalone EXE does not need external image files. Download ZIPs also include the assets for shortcuts and other integrations.
+
+`Assets/RustDeskHop.source.png` preserves the approved original; `Assets/RustDeskHop.png` is the transparent-background production version.
+
+To rebuild the ICO after updating the PNG, run `powershell -File tools\Build-ApplicationIcon.ps1` on Windows. For existing Windows shortcuts, use the updated `RustDeskHop.exe` (icon index 0) or `Assets\RustDeskHop.ico` as the icon source. RustDesk itself retains its own icon.
 
 ## Branches and automation
 

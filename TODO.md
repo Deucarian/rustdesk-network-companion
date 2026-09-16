@@ -36,7 +36,7 @@
 
 ## Windows integration
 
-- [ ] Add a proper application icon.
+- [x] Add a proper application icon.
 - [ ] Add Start Menu and optional startup integration.
 - [ ] Add a lightweight installer or packaged release.
 - [ ] Consider code signing for release builds.

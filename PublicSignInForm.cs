@@ -1,6 +1,6 @@
 namespace Simultria.RustDeskCompanion;
 
-internal sealed class PublicSignInForm : Form
+internal sealed class PublicSignInForm : BrandedForm
 {
     private readonly string rustDeskPath;
     private readonly Label statusLabel = new();

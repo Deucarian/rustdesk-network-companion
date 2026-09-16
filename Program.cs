@@ -283,7 +283,7 @@ internal static class RustDeskSessions
     }
 }
 
-internal sealed class MainForm : Form
+internal sealed class MainForm : BrandedForm
 {
     private readonly DataGridView targetsGrid = new();
     private readonly Label currentNetworkLabel = new();
@@ -324,14 +324,37 @@ internal sealed class MainForm : Form
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
-        var title = new Label
+        var header = new TableLayoutPanel
         {
-            Text = "Choose a RustDesk client",
             AutoSize = true,
-            Font = new Font(Font, FontStyle.Bold),
+            Dock = DockStyle.Fill,
+            ColumnCount = 2,
+            RowCount = 1,
             Margin = new Padding(0, 0, 0, 8),
         };
-        layout.Controls.Add(title, 0, 0);
+        header.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        header.Controls.Add(new PictureBox
+        {
+            Name = "ApplicationLogo",
+            Image = AppBranding.Logo,
+            SizeMode = PictureBoxSizeMode.Zoom,
+            Size = new Size(48, 48),
+            Margin = new Padding(0, 0, 12, 0),
+            TabStop = false,
+            AccessibleName = "RustDeskHop logo",
+        }, 0, 0);
+
+        var title = new Label
+        {
+            Text = "RustDeskHop — choose a RustDesk client",
+            AutoSize = true,
+            Font = new Font(Font, FontStyle.Bold),
+            Anchor = AnchorStyles.Left,
+            Margin = Padding.Empty,
+        };
+        header.Controls.Add(title, 1, 0);
+        layout.Controls.Add(header, 0, 0);
 
         currentNetworkLabel.AutoSize = true;
         currentNetworkLabel.ForeColor = Color.DimGray;
@@ -624,7 +647,7 @@ internal sealed class MainForm : Form
     }
 }
 
-internal sealed class TargetEditorForm : Form
+internal sealed class TargetEditorForm : BrandedForm
 {
     private readonly TextBox nameBox = new();
     private readonly TextBox idBox = new();
@@ -694,7 +717,7 @@ internal sealed class TargetEditorForm : Form
     }
 }
 
-internal sealed class ProfilesForm : Form
+internal sealed class ProfilesForm : BrandedForm
 {
     private readonly ListBox profileList = new();
     private readonly TextBox nameBox = new();
