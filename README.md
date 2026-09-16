@@ -1,5 +1,7 @@
 # RustDeskHop — RustDesk Network Companion
 
+RustDeskHop is a free, open-source, independent companion for RustDesk, licensed under [GNU GPLv3](LICENSE) (`GPL-3.0-only`). It is not affiliated with or endorsed by the RustDesk project.
+
 RustDesk is excellent at connecting to devices, but it becomes awkward when one operator regularly uses more than one RustDesk network—for example, RustDesk's public network and a private self-hosted server.
 
 This companion app provides a simple client-and-network launcher:
@@ -93,7 +95,7 @@ The executable is produced under `bin\Release\net9.0-windows\`.
 - Automated tests verify connection routing, RustDesk configuration detection, login detection, safe public-profile cleanup, and private-server probing.
 - Every push to either branch produces a self-contained Windows ZIP artifact in GitHub Actions.
 
-Because this is a desktop utility, the automated deployment target is a downloadable build artifact rather than a server. Versioned public releases can be added when the project is ready for a release process.
+Because this is a desktop utility, the automated deployment target is a downloadable build artifact rather than a server. Version tags also publish permanent GitHub Releases, as described below.
 
 Feature ideas can be submitted through the repository's **Feature request** issue template.
 
@@ -105,6 +107,14 @@ The latest public release is always available from the stable link below:
 
 Release files use versioned names such as `RustDeskHop-v0.1.0-win-x64.exe` and `RustDeskHop-v0.1.0-win-x64.zip`. Stable releases are created automatically when a version tag such as `v0.1.0` is pushed; tags such as `v0.1.0-beta.1` become prereleases.
 
+New releases include `LICENSE` and a matching `RustDeskHop-v<version>-source.zip` alongside the Windows downloads. The Windows ZIP also includes the license and this usage guide. Download the source archive from the same release as your executable to inspect, modify, or rebuild that version; the **Build** section above describes the build commands.
+
 ## License
 
-This project is intended as an open-source companion around the RustDesk client. RustDesk itself remains under its own license and is not bundled here.
+RustDeskHop's original code, documentation, and included original artwork are licensed under the **GNU General Public License, version 3 only** (`GPL-3.0-only`). See [LICENSE](LICENSE) for the full terms.
+
+You may use, study, modify, and redistribute RustDeskHop. If you distribute modified versions, you must license those versions under GPLv3 and make the corresponding source code available to recipients under its terms. Private modifications do not have to be published. Commercial use and redistribution are permitted; the official RustDeskHop downloads are provided free of charge.
+
+RustDeskHop is provided without warranty, including without any implied warranty of merchantability or fitness for a particular purpose, to the extent permitted by law.
+
+RustDesk is a separate application, is not bundled here, and remains under [its own license](https://github.com/rustdesk/rustdesk/blob/master/LICENCE). Third-party dependencies retain their respective licenses. RustDesk's name and logo are not licensed by this repository, and RustDeskHop does not claim affiliation with or endorsement by RustDesk.
