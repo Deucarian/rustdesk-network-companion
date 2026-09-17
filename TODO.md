@@ -10,7 +10,8 @@
 
 ## Client list and navigation
 
-- [ ] Replace the basic table with searchable client cards or a cleaner list view.
+- [x] Replace the basic table with a cleaner, rounded computer list and selected-computer details.
+- [ ] Add search/filtering to the computer list.
 - [ ] Show client name, RustDesk ID, required network, and online/reachable status.
 - [ ] Add last-connected time and recently used clients.
 - [ ] Add client editing, not only add/remove.
@@ -19,7 +20,7 @@
 
 ## Network profiles
 
-- [ ] Make Public and private profiles visually distinct with colors/icons.
+- [x] Make Public and private profiles visually distinct with labeled badges and colors.
 - [ ] Add a profile status/test button.
 - [ ] Add an “Open Tailscale” action when a private profile is unavailable.
 - [ ] Support importing and exporting profiles and client mappings.

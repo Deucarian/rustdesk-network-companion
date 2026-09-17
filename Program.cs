@@ -283,158 +283,22 @@ internal static class RustDeskSessions
     }
 }
 
-internal sealed class MainForm : BrandedForm
+internal sealed partial class MainForm : BrandedForm
 {
-    private readonly DataGridView targetsGrid = new();
-    private readonly Label currentNetworkLabel = new();
-    private readonly Label statusLabel = new();
-    private readonly Button connectButton = new() { Text = "Connect now", AutoSize = true, Padding = new Padding(10, 4, 10, 4) };
-    private AppSettings settings = null!;
-
-    public MainForm()
-    {
-        Text = "RustDeskHop — RustDesk Network Companion";
-        StartPosition = FormStartPosition.CenterScreen;
-        MinimumSize = new Size(760, 460);
-        Size = new Size(900, 560);
-        Font = new Font("Segoe UI", 10F);
-
-        BuildUi();
-        Load += (_, _) =>
-        {
-            settings = ConfigStore.Load();
-            ConfigStore.Save(settings);
-            RefreshTargets();
-        };
-        Activated += (_, _) => RefreshNetworkStatus();
-    }
-
-    private void BuildUi()
-    {
-        var layout = new TableLayoutPanel
-        {
-            Dock = DockStyle.Fill,
-            Padding = new Padding(16),
-            ColumnCount = 1,
-            RowCount = 5,
-        };
-        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-
-        var header = new TableLayoutPanel
-        {
-            AutoSize = true,
-            Dock = DockStyle.Fill,
-            ColumnCount = 2,
-            RowCount = 1,
-            Margin = new Padding(0, 0, 0, 8),
-        };
-        header.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-        header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        header.Controls.Add(new PictureBox
-        {
-            Name = "ApplicationLogo",
-            Image = AppBranding.Logo,
-            SizeMode = PictureBoxSizeMode.Zoom,
-            Size = new Size(48, 48),
-            Margin = new Padding(0, 0, 12, 0),
-            TabStop = false,
-            AccessibleName = "RustDeskHop logo",
-        }, 0, 0);
-
-        var title = new Label
-        {
-            Text = "RustDeskHop — choose a RustDesk client",
-            AutoSize = true,
-            Font = new Font(Font, FontStyle.Bold),
-            Anchor = AnchorStyles.Left,
-            Margin = Padding.Empty,
-        };
-        header.Controls.Add(title, 1, 0);
-        layout.Controls.Add(header, 0, 0);
-
-        currentNetworkLabel.AutoSize = true;
-        currentNetworkLabel.ForeColor = Color.DimGray;
-        currentNetworkLabel.Margin = new Padding(0, 0, 0, 12);
-        layout.Controls.Add(currentNetworkLabel, 0, 1);
-
-        targetsGrid.Dock = DockStyle.Fill;
-        targetsGrid.AllowUserToAddRows = false;
-        targetsGrid.AllowUserToDeleteRows = false;
-        targetsGrid.ReadOnly = true;
-        targetsGrid.MultiSelect = false;
-        targetsGrid.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-        targetsGrid.AutoGenerateColumns = false;
-        targetsGrid.RowHeadersVisible = false;
-        targetsGrid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "Client", DataPropertyName = "Name", Width = 300, SortMode = DataGridViewColumnSortMode.NotSortable });
-        targetsGrid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "RustDesk ID", DataPropertyName = "RustDeskId", Width = 150, SortMode = DataGridViewColumnSortMode.NotSortable });
-        targetsGrid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "Network", DataPropertyName = "ProfileName", AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill, SortMode = DataGridViewColumnSortMode.NotSortable });
-        targetsGrid.CellDoubleClick += async (_, e) =>
-        {
-            if (e.RowIndex >= 0)
-            {
-                await ConnectSelectedAsync();
-            }
-        };
-        targetsGrid.KeyDown += async (_, e) =>
-        {
-            if (e.KeyCode == Keys.Enter)
-            {
-                e.SuppressKeyPress = true;
-                await ConnectSelectedAsync();
-            }
-        };
-        layout.Controls.Add(targetsGrid, 0, 2);
-
-        var buttons = new FlowLayoutPanel
-        {
-            Dock = DockStyle.Fill,
-            AutoSize = true,
-            FlowDirection = FlowDirection.LeftToRight,
-            Margin = new Padding(0, 12, 0, 8),
-        };
-
-        connectButton.Click += async (_, _) => await ConnectSelectedAsync();
-        buttons.Controls.Add(connectButton);
-
-        var addButton = new Button { Text = "Add client", AutoSize = true, Padding = new Padding(10, 4, 10, 4) };
-        addButton.Click += (_, _) => AddClient();
-        buttons.Controls.Add(addButton);
-
-        var removeButton = new Button { Text = "Remove client", AutoSize = true, Padding = new Padding(10, 4, 10, 4) };
-        removeButton.Click += (_, _) => RemoveClient();
-        buttons.Controls.Add(removeButton);
-
-        var profilesButton = new Button { Text = "Manage networks", AutoSize = true, Padding = new Padding(10, 4, 10, 4) };
-        profilesButton.Click += (_, _) => ManageProfiles();
-        buttons.Controls.Add(profilesButton);
-
-        layout.Controls.Add(buttons, 0, 3);
-
-        statusLabel.AutoSize = true;
-        statusLabel.ForeColor = Color.DimGray;
-        layout.Controls.Add(statusLabel, 0, 4);
-
-        Controls.Add(layout);
-    }
 
     private void RefreshTargets()
     {
         RefreshNetworkStatus();
 
         targetsGrid.DataSource = settings.Targets
-            .Select(target => new
-            {
-                target.Name,
-                target.RustDeskId,
-                ProfileName = settings.Profiles.FirstOrDefault(p => p.Id == target.ProfileId)?.Name ?? "Missing profile",
-            })
+            .Select(target => new ComputerRow(target.Name, target.RustDeskId,
+                settings.Profiles.FirstOrDefault(p => p.Id == target.ProfileId)?.Name ?? "Missing profile",
+                settings.Profiles.FirstOrDefault(p => p.Id == target.ProfileId)?.IsPublic ?? false))
             .ToList();
 
-        statusLabel.Text = "Ready — connections are routed per client and existing sessions stay open.";
+        emptyState.Visible = settings.Targets.Count == 0;
+        statusLabel.Text = ReadyMessage;
+        UpdateSelection();
     }
 
     private void RefreshNetworkStatus()
@@ -446,8 +310,8 @@ internal sealed class MainForm : BrandedForm
 
         var current = RustDeskConfigReader.DetectDefaultProfile(settings);
         currentNetworkLabel.Text = current is null
-            ? "RustDesk default: unknown • Saved clients still use their assigned route"
-            : $"RustDesk default: {current.Name} • Saved clients use their assigned route";
+            ? "RustDesk default: unknown"
+            : $"RustDesk default: {current.Name}";
     }
 
     private async Task ConnectSelectedAsync()
@@ -477,7 +341,8 @@ internal sealed class MainForm : BrandedForm
             return;
         }
 
-        connectButton.Enabled = false;
+        connecting = true;
+        UpdateSelection();
         try
         {
             var current = RustDeskConfigReader.DetectDefaultProfile(settings);
@@ -546,7 +411,8 @@ internal sealed class MainForm : BrandedForm
         }
         finally
         {
-            connectButton.Enabled = true;
+            connecting = false;
+            UpdateSelection();
             RefreshNetworkStatus();
         }
     }
@@ -661,17 +527,19 @@ internal sealed class TargetEditorForm : BrandedForm
             ? new TargetDefinition { ProfileId = profiles[0].Id }
             : new TargetDefinition { Name = existing.Name, RustDeskId = existing.RustDeskId, ProfileId = existing.ProfileId };
 
-        Text = existing is null ? "Add RustDesk client" : "Edit RustDesk client";
+        Text = existing is null ? "Add computer" : "Edit computer";
         StartPosition = FormStartPosition.CenterParent;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = false;
-        ClientSize = new Size(440, 210);
-        Font = new Font("Segoe UI", 10F);
+        ClientSize = new Size(570, 360);
 
-        var layout = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(14), ColumnCount = 2, RowCount = 4 };
-        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 120));
+        var layout = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(28), ColumnCount = 2, RowCount = 4 };
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 130));
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        for (var row = 0; row < 3; row++) layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        nameBox.Name = "ComputerName"; idBox.Name = "RustDeskId"; profileBox.Name = "Network";
         AddRow(layout, 0, "Name", nameBox);
         AddRow(layout, 1, "RustDesk ID", idBox);
 
@@ -681,8 +549,8 @@ internal sealed class TargetEditorForm : BrandedForm
         profileBox.ValueMember = nameof(ServerProfile.Id);
         AddRow(layout, 2, "Network", profileBox);
 
-        var buttons = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.RightToLeft, AutoSize = true };
-        var save = new Button { Text = "Save", DialogResult = DialogResult.OK, AutoSize = true };
+        var buttons = new FlowLayoutPanel { Dock = DockStyle.Bottom, FlowDirection = FlowDirection.RightToLeft, AutoSize = true, Padding = new Padding(0, 18, 0, 0) };
+        var save = new ModernButton { Text = "Save computer", Primary = true, DialogResult = DialogResult.OK, AutoSize = true };
         save.Click += (_, _) =>
         {
             if (string.IsNullOrWhiteSpace(nameBox.Text) || string.IsNullOrWhiteSpace(idBox.Text) || profileBox.SelectedValue is null)
@@ -697,10 +565,10 @@ internal sealed class TargetEditorForm : BrandedForm
             Target.ProfileId = profileBox.SelectedValue.ToString()!;
         };
         buttons.Controls.Add(save);
-        buttons.Controls.Add(new Button { Text = "Cancel", DialogResult = DialogResult.Cancel, AutoSize = true });
+        buttons.Controls.Add(new ModernButton { Text = "Cancel", DialogResult = DialogResult.Cancel, AutoSize = true });
         layout.Controls.Add(buttons, 0, 3);
         layout.SetColumnSpan(buttons, 2);
-        Controls.Add(layout);
+        WindowContent.Controls.Add(layout);
 
         nameBox.Text = Target.Name;
         idBox.Text = Target.RustDeskId;
@@ -711,7 +579,10 @@ internal sealed class TargetEditorForm : BrandedForm
 
     private static void AddRow(TableLayoutPanel layout, int row, string label, Control control)
     {
-        layout.Controls.Add(new Label { Text = label, AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(0, 7, 8, 0) }, 0, row);
+        AppTheme.StyleEditor(control);
+        control.AccessibleName = label;
+        layout.Controls.Add(new Label { Text = label, AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(0, 0, 16, 8), ForeColor = AppTheme.Muted }, 0, row);
+        control = new InputSurface(control);
         control.Dock = DockStyle.Fill;
         layout.Controls.Add(control, 1, row);
     }
@@ -734,26 +605,44 @@ internal sealed class ProfilesForm : BrandedForm
     public ProfilesForm(IEnumerable<ServerProfile> source)
     {
         profiles = source.Select(Clone).ToList();
-        Text = "Manage RustDesk networks";
+        Text = "Manage networks";
         StartPosition = FormStartPosition.CenterParent;
-        MinimumSize = new Size(900, 560);
-        Size = new Size(980, 620);
-        Font = new Font("Segoe UI", 10F);
+        MinimumSize = new Size(960, 650);
+        ClientSize = new Size(1040, 684);
+        WindowContent.Padding = new Padding(24);
 
         var split = new SplitContainer
         {
             Dock = DockStyle.Fill,
             Orientation = Orientation.Vertical,
             FixedPanel = FixedPanel.Panel1,
-            SplitterWidth = 6,
-            Padding = new Padding(12),
+            SplitterWidth = 16,
+            Padding = new Padding(24),
         };
         split.Size = ClientSize;
-        split.Panel1MinSize = 210;
-        split.Panel2MinSize = 500;
-        split.SplitterDistance = 245;
+        split.Panel1MinSize = 220;
+        split.Panel2MinSize = 550;
+        split.SplitterDistance = 260;
 
         profileList.Dock = DockStyle.Fill;
+        profileList.Name = "Networks";
+        profileList.AccessibleName = "Saved networks";
+        profileList.BorderStyle = BorderStyle.None;
+        profileList.BackColor = Color.White;
+        profileList.IntegralHeight = false;
+        profileList.DrawMode = DrawMode.OwnerDrawFixed;
+        profileList.ItemHeight = 68;
+        profileList.DrawItem += (_, e) =>
+        {
+            if (e.Index < 0) return;
+            var selected = (e.State & DrawItemState.Selected) != 0;
+            using var background = new SolidBrush(selected ? AppTheme.Selection : Color.White);
+            e.Graphics.FillRectangle(background, e.Bounds);
+            var textBounds = Rectangle.Inflate(e.Bounds, -16, -8);
+            TextRenderer.DrawText(e.Graphics, profileList.GetItemText(profileList.Items[e.Index]), Font, textBounds,
+                selected ? AppTheme.Blue : AppTheme.Ink, TextFormatFlags.WordBreak | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
+            if ((e.State & DrawItemState.Focus) != 0) e.DrawFocusRectangle();
+        };
         profileList.DisplayMember = nameof(ServerProfile.Name);
         profileList.SelectedIndexChanged += (_, _) => LoadSelected();
         split.Panel1.Controls.Add(profileList);
@@ -761,7 +650,7 @@ internal sealed class ProfilesForm : BrandedForm
         var editor = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
-            Padding = new Padding(12),
+            Padding = new Padding(16, 10, 12, 10),
             ColumnCount = 2,
             RowCount = 8,
             GrowStyle = TableLayoutPanelGrowStyle.FixedSize,
@@ -786,7 +675,7 @@ internal sealed class ProfilesForm : BrandedForm
             Text = "Use “public” for RustDesk’s public network. Private profiles use the ID server address and its public key.",
             AutoSize = true,
             Dock = DockStyle.Top,
-            ForeColor = Color.DimGray,
+            ForeColor = AppTheme.Muted,
             Margin = new Padding(3, 8, 3, 12),
         };
         editor.Controls.Add(hint, 0, 6);
@@ -808,22 +697,24 @@ internal sealed class ProfilesForm : BrandedForm
             AutoSize = true,
             Margin = new Padding(0, 8, 0, 0),
         };
-        var add = new Button { Text = "New", AutoSize = true };
+        var add = new ModernButton { Text = "New", Glyph = UiGlyph.Plus, AutoSize = true };
         add.Click += (_, _) => NewProfile();
         buttons.Controls.Add(add);
-        var save = new Button { Text = "Save profile", AutoSize = true };
+        var save = new ModernButton { Text = "Save network", Primary = true, AutoSize = true };
         save.Click += (_, _) => SaveSelected();
         buttons.Controls.Add(save);
-        var remove = new Button { Text = "Delete", AutoSize = true };
+        var remove = new ModernButton { Text = "Delete", AutoSize = true };
         remove.Click += (_, _) => DeleteSelected();
         buttons.Controls.Add(remove);
-        var close = new Button { Text = "Close", DialogResult = DialogResult.OK, AutoSize = true };
+        var close = new ModernButton { Text = "Close", DialogResult = DialogResult.OK, AutoSize = true };
         buttons.Controls.Add(close);
         editor.Controls.Add(buttons, 0, 7);
         editor.SetColumnSpan(buttons, 2);
         split.Panel2.Controls.Add(editor);
 
-        Controls.Add(split);
+        WindowContent.Controls.Add(split);
+        AcceptButton = save;
+        CancelButton = close;
         Shown += (_, _) =>
         {
             UpdateHintWidth();
@@ -913,7 +804,10 @@ internal sealed class ProfilesForm : BrandedForm
 
     private static void AddRow(TableLayoutPanel layout, int row, string label, Control control)
     {
-        layout.Controls.Add(new Label { Text = label, AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(0, 7, 8, 0) }, 0, row);
+        AppTheme.StyleEditor(control);
+        control.AccessibleName = label;
+        layout.Controls.Add(new Label { Text = label, AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(0, 0, 16, 8), ForeColor = AppTheme.Muted }, 0, row);
+        control = new InputSurface(control);
         control.Dock = DockStyle.Fill;
         layout.Controls.Add(control, 1, row);
     }

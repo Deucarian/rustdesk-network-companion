@@ -15,13 +15,12 @@ internal sealed class PublicSignInForm : BrandedForm
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = false;
-        ClientSize = new Size(520, 260);
-        Font = new Font("Segoe UI", 10F);
+        ClientSize = new Size(680, 410);
 
         var layout = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
-            Padding = new Padding(18),
+            Padding = new Padding(28),
             ColumnCount = 1,
             RowCount = 5,
         };
@@ -35,7 +34,7 @@ internal sealed class PublicSignInForm : BrandedForm
         {
             Text = "Finish signing in inside RustDesk",
             AutoSize = true,
-            Font = new Font(Font, FontStyle.Bold),
+            Font = AppTheme.Strong,
             Margin = new Padding(0, 0, 0, 10),
         });
 
@@ -43,13 +42,13 @@ internal sealed class PublicSignInForm : BrandedForm
         {
             Text = "In RustDesk, open Settings → Account → Login and choose Google, GitHub, or Microsoft. Complete the browser sign-in yourself. RustDeskHop will notice when it succeeds and continue your saved connection automatically.",
             AutoSize = true,
-            MaximumSize = new Size(475, 0),
+            MaximumSize = new Size(610, 0),
             Margin = new Padding(0, 0, 0, 14),
         });
 
         statusLabel.Text = "Waiting for RustDesk sign-in…";
         statusLabel.AutoSize = true;
-        statusLabel.ForeColor = Color.DimGray;
+        statusLabel.ForeColor = AppTheme.Muted;
         layout.Controls.Add(statusLabel);
 
         var buttons = new FlowLayoutPanel
@@ -59,19 +58,19 @@ internal sealed class PublicSignInForm : BrandedForm
             FlowDirection = FlowDirection.LeftToRight,
         };
 
-        var openRustDesk = new Button { Text = "Open RustDesk", AutoSize = true, Padding = new Padding(8, 3, 8, 3) };
+        var openRustDesk = new ModernButton { Text = "Open RustDesk", Primary = true, AutoSize = true };
         openRustDesk.Click += (_, _) => OpenRustDesk();
         buttons.Controls.Add(openRustDesk);
 
-        var checkAgain = new Button { Text = "I've signed in — check again", AutoSize = true, Padding = new Padding(8, 3, 8, 3) };
+        var checkAgain = new ModernButton { Text = "Check sign-in", AutoSize = true };
         checkAgain.Click += (_, _) => CheckLogin();
         buttons.Controls.Add(checkAgain);
 
-        var cancel = new Button { Text = "Cancel", DialogResult = DialogResult.Cancel, AutoSize = true, Padding = new Padding(8, 3, 8, 3) };
+        var cancel = new ModernButton { Text = "Cancel", DialogResult = DialogResult.Cancel, AutoSize = true };
         buttons.Controls.Add(cancel);
 
         layout.Controls.Add(buttons, 0, 4);
-        Controls.Add(layout);
+        WindowContent.Controls.Add(layout);
 
         CancelButton = cancel;
         loginTimer.Tick += (_, _) => CheckLogin();

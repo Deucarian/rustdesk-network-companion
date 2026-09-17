@@ -61,7 +61,8 @@ public sealed class AppBrandingTests
                 Assert.Same(AppBranding.Icon, form.Icon);
                 Assert.True(form.ShowIcon);
             }
-            var picture = Assert.IsType<PictureBox>(Assert.Single(main.Controls.Find("ApplicationLogo", true)));
+            Assert.Empty(main.Controls.Find("ApplicationLogo", true));
+            var picture = Assert.IsType<PictureBox>(Assert.Single(main.Controls.Find("TitleBarIcon", true)));
             Assert.Same(AppBranding.Logo, picture.Image);
         });
     }
