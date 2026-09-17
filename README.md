@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="Assets/RustDeskHop.png" alt="RustDeskHop rabbit icon" width="144" height="144">
+</p>
+
 # RustDeskHop — RustDesk Network Companion
 
 RustDeskHop is a free, open-source, independent companion for RustDesk, licensed under [GNU GPLv3](LICENSE) (`GPL-3.0-only`). It is not affiliated with or endorsed by the RustDesk project.
@@ -38,7 +42,7 @@ For normal day-to-day use:
 1. Open **RustDeskHop**.
 2. Select the computer you want to reach.
 3. Check that the displayed network is the one you expect.
-4. Click **Connect now**.
+4. Click **Connect** (or press Enter while the computer list is focused).
 5. Approve the route confirmation if one appears.
 
 That is the complete switching workflow. RustDeskHop routes the new connection through the network assigned to that computer. You do not need to edit RustDesk's server settings, restart RustDesk, or manually switch between public and private servers. Existing sessions on other networks stay open.
@@ -53,7 +57,13 @@ Before the first connection from a particular PC:
 - Start Tailscale, another VPN, or the required network route before using a private profile.
 - Make sure the destination computer and its RustDesk server are online.
 
-After those one-time steps, future connections should require only selecting the computer and clicking **Connect now**.
+After those one-time steps, future connections should require only selecting the computer and clicking **Connect**.
+
+### The desktop interface
+
+The light interface uses a rounded computer list, a pale-blue selection, and distinct Public/Private badges. The selected computer and its route appear beside **Connect**. Use **Add computer**, **Remove computer**, and **Manage networks** to maintain your saved connections. Arrow keys move through the computer list; Enter connects. Longer names wrap and longer lists scroll.
+
+The rabbit icon stays in the title bar and taskbar, without a second oversized logo in the content. Network settings and the add-computer dialog share the same styling. These presentation changes do not change RustDesk routing or close existing sessions.
 
 ### Incoming connections to this PC
 
@@ -70,7 +80,7 @@ For reliable unattended incoming access, keep the RustDesk background service in
 
 ## Configuration
 
-On first run, use **Manage networks** and **Add client** to configure the profiles and IDs for your environment. Settings are stored in:
+On first run, use **Manage networks** and **Add computer** to configure the profiles and IDs for your environment. Settings are stored in:
 
 ```text
 %APPDATA%\SimultriaRustDeskCompanion\settings.json
@@ -86,6 +96,14 @@ dotnet test tests\RustDeskHop.Tests\RustDeskHop.Tests.csproj -c Release
 ```
 
 The executable is produced under `bin\Release\net9.0-windows\`.
+
+### Application icon
+
+The approved rabbit artwork is used by the executable, taskbar, all application windows, and this README. The PNG and multi-resolution Windows ICO live in `Assets/` and are embedded in the application, so the standalone EXE does not need external image files. Download ZIPs also include the assets for shortcuts and other integrations.
+
+`Assets/RustDeskHop.source.png` preserves the approved original; `Assets/RustDeskHop.png` is the transparent-background production version.
+
+To rebuild the ICO after updating the PNG, run `powershell -File tools\Build-ApplicationIcon.ps1` on Windows. For existing Windows shortcuts, use the updated `RustDeskHop.exe` (icon index 0) or `Assets\RustDeskHop.ico` as the icon source. RustDesk itself retains its own icon.
 
 ## Branches and automation
 
