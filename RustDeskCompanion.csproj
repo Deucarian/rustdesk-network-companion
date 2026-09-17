@@ -8,10 +8,16 @@
     <AssemblyName>RustDeskHop</AssemblyName>
     <RootNamespace>Simultria.RustDeskCompanion</RootNamespace>
     <PackageLicenseExpression>GPL-3.0-only</PackageLicenseExpression>
+    <ApplicationIcon>Assets\RustDeskHop.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
     <None Update="settings.local.json" CopyToOutputDirectory="PreserveNewest" />
     <None Update="LICENSE;README.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Assets\RustDeskHop.ico" LogicalName="RustDeskHop.Assets.RustDeskHop.ico" />
+    <EmbeddedResource Include="Assets\RustDeskHop.png" LogicalName="RustDeskHop.Assets.RustDeskHop.png" />
+    <None Update="Assets\RustDeskHop.ico;Assets\RustDeskHop.png" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
   </ItemGroup>
   <ItemGroup>
     <Compile Remove="tests\**\*.cs" />

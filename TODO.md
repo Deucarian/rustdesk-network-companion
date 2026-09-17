@@ -1,5 +1,12 @@
 # TODO
 
+## Priority: refine UI sizing and match the approved design
+
+- [ ] The redesigned UI is sometimes too large and does not yet match the approved mockup closely enough. Refine the window size, spacing, typography, buttons, and list-row heights while preserving the agreed visual style.
+- [ ] Check the main window and dialogs at smaller window sizes, when maximized, and at common Windows display scaling levels. Keep controls proportionate and all text readable without clipping.
+
+User feedback recorded on 2026-09-17. This is follow-up work; no UI changes were requested when adding this note.
+
 ## Next milestone: tray-first UX
 
 - [ ] Add a system-tray mode so the companion can stay available without an open window.
@@ -10,7 +17,8 @@
 
 ## Client list and navigation
 
-- [ ] Replace the basic table with searchable client cards or a cleaner list view.
+- [x] Replace the basic table with a cleaner, rounded computer list and selected-computer details.
+- [ ] Add search/filtering to the computer list.
 - [ ] Show client name, RustDesk ID, required network, and online/reachable status.
 - [ ] Add last-connected time and recently used clients.
 - [ ] Add client editing, not only add/remove.
@@ -19,7 +27,7 @@
 
 ## Network profiles
 
-- [ ] Make Public and private profiles visually distinct with colors/icons.
+- [x] Make Public and private profiles visually distinct with labeled badges and colors.
 - [ ] Add a profile status/test button.
 - [ ] Add an “Open Tailscale” action when a private profile is unavailable.
 - [ ] Support importing and exporting profiles and client mappings.
@@ -36,7 +44,7 @@
 
 ## Windows integration
 
-- [ ] Add a proper application icon.
+- [x] Add a proper application icon.
 - [ ] Add Start Menu and optional startup integration.
 - [ ] Add a lightweight installer or packaged release.
 - [ ] Consider code signing for release builds.
