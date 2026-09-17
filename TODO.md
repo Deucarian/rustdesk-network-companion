@@ -1,5 +1,12 @@
 # TODO
 
+## Priority: refine UI sizing and match the approved design
+
+- [ ] The redesigned UI is sometimes too large and does not yet match the approved mockup closely enough. Refine the window size, spacing, typography, buttons, and list-row heights while preserving the agreed visual style.
+- [ ] Check the main window and dialogs at smaller window sizes, when maximized, and at common Windows display scaling levels. Keep controls proportionate and all text readable without clipping.
+
+User feedback recorded on 2026-09-17. This is follow-up work; no UI changes were requested when adding this note.
+
 ## Next milestone: tray-first UX
 
 - [ ] Add a system-tray mode so the companion can stay available without an open window.
