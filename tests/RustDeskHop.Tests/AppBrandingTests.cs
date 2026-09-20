@@ -67,6 +67,27 @@ public sealed class AppBrandingTests
     }
 
     [Fact]
+    public void HeaderArtworkIsExactlyTheLargestGeneratedWindowsFrame()
+    {
+        using var stream = typeof(AppBranding).Assembly.GetManifestResourceStream(AppBranding.IconResourceName)!;
+        using var reader = new BinaryReader(stream);
+        reader.ReadBytes(4);
+        var count = reader.ReadUInt16();
+        stream.Position = 6 + 16 * (count - 1) + 8;
+        var length = reader.ReadInt32();
+        var offset = reader.ReadInt32();
+        stream.Position = offset;
+        var iconPng = reader.ReadBytes(length);
+        using var logo = typeof(AppBranding).Assembly.GetManifestResourceStream(AppBranding.LogoResourceName)!;
+        using var png = new MemoryStream();
+        logo.CopyTo(png);
+        Assert.Equal(iconPng, png.ToArray());
+        // The approved inverse has a light tile, not the former blue tile.
+        var tile = AppBranding.Logo.GetPixel(128, 12);
+        Assert.True(tile.R > 230 && tile.G > 230 && tile.B > 230);
+    }
+
+    [Fact]
     public void EmbeddedArtworkLoadsWithoutExternalFiles()
     {
         Assert.NotEqual(IntPtr.Zero, AppBranding.Icon.Handle);

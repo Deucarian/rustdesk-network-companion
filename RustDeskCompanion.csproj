@@ -8,17 +8,31 @@
     <AssemblyName>RustDeskHop</AssemblyName>
     <RootNamespace>Simultria.RustDeskCompanion</RootNamespace>
     <PackageLicenseExpression>GPL-3.0-only</PackageLicenseExpression>
-    <ApplicationIcon>Assets\RustDeskHop.ico</ApplicationIcon>
+    <BrandingSource>$(MSBuildProjectDirectory)\Assets\RustDeskHop.png</BrandingSource>
   </PropertyGroup>
   <ItemGroup>
     <None Update="settings.local.json" CopyToOutputDirectory="PreserveNewest" />
     <None Update="LICENSE;README.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
   </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="Assets\RustDeskHop.ico" LogicalName="RustDeskHop.Assets.RustDeskHop.ico" />
-    <EmbeddedResource Include="Assets\RustDeskHop.png" LogicalName="RustDeskHop.Assets.RustDeskHop.png" />
-    <None Update="Assets\RustDeskHop.ico;Assets\RustDeskHop.png" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
-  </ItemGroup>
+  <Target Name="GenerateApplicationBranding"
+          Inputs="$(BrandingSource);$(MSBuildProjectDirectory)\tools\Build-ApplicationIcon.ps1"
+          Outputs="$(IntermediateOutputPath)branding\RustDeskHop.ico;$(IntermediateOutputPath)branding\RustDeskHop.png">
+    <Exec Command="powershell.exe -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\tools\Build-ApplicationIcon.ps1&quot; -Source &quot;$(BrandingSource)&quot; -Destination &quot;$(IntermediateOutputPath)branding\RustDeskHop.ico&quot; -LogoDestination &quot;$(IntermediateOutputPath)branding\RustDeskHop.png&quot;" />
+  </Target>
+  <Target Name="UseApplicationBranding" BeforeTargets="AssignTargetPaths" DependsOnTargets="GenerateApplicationBranding">
+    <PropertyGroup>
+      <ApplicationIcon>$(IntermediateOutputPath)branding\RustDeskHop.ico</ApplicationIcon>
+    </PropertyGroup>
+    <ItemGroup>
+      <EmbeddedResource Include="$(IntermediateOutputPath)branding\RustDeskHop.ico" LogicalName="RustDeskHop.Assets.RustDeskHop.ico" />
+      <EmbeddedResource Include="$(IntermediateOutputPath)branding\RustDeskHop.png" LogicalName="RustDeskHop.Assets.RustDeskHop.png" />
+      <None Include="$(IntermediateOutputPath)branding\RustDeskHop.ico"
+            Link="Assets\RustDeskHop.ico" TargetPath="Assets\RustDeskHop.ico" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+      <None Include="$(IntermediateOutputPath)branding\RustDeskHop.png"
+            Link="Assets\RustDeskHop.png" TargetPath="Assets\RustDeskHop.png" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+      <FileWrites Include="$(IntermediateOutputPath)branding\RustDeskHop.ico;$(IntermediateOutputPath)branding\RustDeskHop.png" />
+    </ItemGroup>
+  </Target>
   <ItemGroup>
     <Compile Remove="tests\**\*.cs" />
     <None Remove="tests\**\*" />

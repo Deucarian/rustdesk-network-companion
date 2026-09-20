@@ -534,7 +534,9 @@ internal sealed class TargetEditorForm : BrandedForm
         MinimizeBox = false;
         ClientSize = new Size(500, 290);
 
-        var layout = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(20), ColumnCount = 2, RowCount = 4 };
+        WindowContent.Padding = new Padding(UiMetrics.Inset);
+        var surface = new SurfacePanel { Dock = DockStyle.Fill, Padding = new Padding(UiMetrics.Inset) };
+        var layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 4 };
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 110));
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         for (var row = 0; row < 3; row++) layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -549,8 +551,8 @@ internal sealed class TargetEditorForm : BrandedForm
         profileBox.ValueMember = nameof(ServerProfile.Id);
         AddRow(layout, 2, "Network", profileBox);
 
-        var buttons = new FlowLayoutPanel { Dock = DockStyle.Bottom, FlowDirection = FlowDirection.RightToLeft, AutoSize = true, Padding = new Padding(0, 12, 0, 0) };
-        var save = new ModernButton { Text = "Save computer", Primary = true, DialogResult = DialogResult.OK, AutoSize = true };
+        var buttons = new FlowLayoutPanel { Dock = DockStyle.Bottom, FlowDirection = FlowDirection.RightToLeft, AutoSize = true, Margin = Padding.Empty, Padding = new Padding(0, 12, 0, 0) };
+        var save = new ModernButton { Text = "Save computer", Primary = true, DialogResult = DialogResult.OK, AutoSize = true, Margin = Padding.Empty };
         save.Click += (_, _) =>
         {
             if (string.IsNullOrWhiteSpace(nameBox.Text) || string.IsNullOrWhiteSpace(idBox.Text) || profileBox.SelectedValue is null)
@@ -565,10 +567,11 @@ internal sealed class TargetEditorForm : BrandedForm
             Target.ProfileId = profileBox.SelectedValue.ToString()!;
         };
         buttons.Controls.Add(save);
-        buttons.Controls.Add(new ModernButton { Text = "Cancel", DialogResult = DialogResult.Cancel, AutoSize = true });
+        buttons.Controls.Add(new ModernButton { Text = "Cancel", Quiet = true, DialogResult = DialogResult.Cancel, AutoSize = true });
         layout.Controls.Add(buttons, 0, 3);
         layout.SetColumnSpan(buttons, 2);
-        WindowContent.Controls.Add(layout);
+        surface.Controls.Add(layout);
+        WindowContent.Controls.Add(surface);
 
         nameBox.Text = Target.Name;
         idBox.Text = Target.RustDeskId;
@@ -608,19 +611,21 @@ internal sealed class ProfilesForm : BrandedForm
         Text = "Manage networks";
         StartPosition = FormStartPosition.CenterParent;
         MinimumSize = new Size(780, 530);
-        ClientSize = new Size(860, 540);
-        WindowContent.Padding = new Padding(18);
+        ClientSize = new Size(860, 500);
+        WindowContent.Padding = new Padding(UiMetrics.SectionGap);
+        var surface = new SurfacePanel { Padding = new Padding(UiMetrics.Inset) };
 
         var split = new SplitContainer
         {
+            Dock = DockStyle.Fill,
             Orientation = Orientation.Vertical,
             FixedPanel = FixedPanel.Panel1,
-            SplitterWidth = 12,
+            SplitterWidth = UiMetrics.Inset,
         };
         split.Size = ClientSize;
-        split.Panel1MinSize = 180;
-        split.Panel2MinSize = 500;
-        split.SplitterDistance = 220;
+        split.Panel1MinSize = 176;
+        split.Panel2MinSize = 440;
+        split.SplitterDistance = 208;
 
         profileList.Dock = DockStyle.Fill;
         profileList.Name = "Networks";
@@ -629,16 +634,22 @@ internal sealed class ProfilesForm : BrandedForm
         profileList.BackColor = Color.White;
         profileList.IntegralHeight = false;
         profileList.DrawMode = DrawMode.OwnerDrawFixed;
-        profileList.ItemHeight = 52;
+        profileList.ItemHeight = UiMetrics.RowHeight;
         profileList.DrawItem += (_, e) =>
         {
             if (e.Index < 0) return;
             var selected = (e.State & DrawItemState.Selected) != 0;
             using var background = new SolidBrush(selected ? AppTheme.Selection : Color.White);
             e.Graphics.FillRectangle(background, e.Bounds);
+            if (selected)
+            {
+                using var accent = new SolidBrush(AppTheme.Blue);
+                e.Graphics.FillRectangle(accent, e.Bounds.Left, e.Bounds.Top + 10 * DeviceDpi / 96F,
+                    3 * DeviceDpi / 96F, e.Bounds.Height - 20 * DeviceDpi / 96F);
+            }
             var textBounds = Rectangle.Inflate(e.Bounds, -(int)(12 * DeviceDpi / 96F), -(int)(6 * DeviceDpi / 96F));
             TextRenderer.DrawText(e.Graphics, profileList.GetItemText(profileList.Items[e.Index]), Font, textBounds,
-                selected ? AppTheme.Blue : AppTheme.Ink, TextFormatFlags.WordBreak | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
+                AppTheme.Ink, TextFormatFlags.WordBreak | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
             if ((e.State & DrawItemState.Focus) != 0) e.DrawFocusRectangle();
         };
         profileList.DisplayMember = nameof(ServerProfile.Name);
@@ -648,7 +659,7 @@ internal sealed class ProfilesForm : BrandedForm
         var editor = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
-            Padding = new Padding(12, 6, 8, 6),
+            Padding = new Padding(UiMetrics.Inset, 0, 0, 0),
             ColumnCount = 2,
             RowCount = 8,
             GrowStyle = TableLayoutPanelGrowStyle.FixedSize,
@@ -674,6 +685,7 @@ internal sealed class ProfilesForm : BrandedForm
             AutoSize = true,
             Dock = DockStyle.Top,
             ForeColor = AppTheme.Muted,
+            Font = AppTheme.Small,
             Margin = new Padding(3, 8, 3, 12),
         };
         editor.Controls.Add(hint, 0, 6);
@@ -690,33 +702,38 @@ internal sealed class ProfilesForm : BrandedForm
         var buttons = new FlowLayoutPanel
         {
             Dock = DockStyle.Fill,
-            FlowDirection = FlowDirection.LeftToRight,
+            FlowDirection = FlowDirection.RightToLeft,
             WrapContents = true,
             AutoSize = true,
             Margin = new Padding(0, 8, 0, 0),
         };
         var add = new ModernButton { Text = "New", Glyph = UiGlyph.Plus, AutoSize = true };
         add.Click += (_, _) => NewProfile();
-        buttons.Controls.Add(add);
-        var save = new ModernButton { Text = "Save network", Primary = true, AutoSize = true };
+        var newNetworkArea = new Panel { Dock = DockStyle.Bottom, Height = UiMetrics.ButtonHeight + UiMetrics.Inset };
+        add.Text = "New network";
+        add.Dock = DockStyle.Bottom;
+        newNetworkArea.Controls.Add(add);
+        split.Panel1.Controls.Add(newNetworkArea);
+        var save = new ModernButton { Text = "Save network", Primary = true, AutoSize = true, Margin = Padding.Empty };
         save.Click += (_, _) => SaveSelected();
         buttons.Controls.Add(save);
-        var remove = new ModernButton { Text = "Delete", AutoSize = true };
+        var remove = new ModernButton { Text = "Delete", Quiet = true, AutoSize = true };
         remove.Click += (_, _) => DeleteSelected();
-        buttons.Controls.Add(remove);
-        var close = new ModernButton { Text = "Close", DialogResult = DialogResult.OK, AutoSize = true };
+        var close = new ModernButton { Text = "Close", Quiet = true, DialogResult = DialogResult.OK, AutoSize = true };
         buttons.Controls.Add(close);
+        buttons.Controls.Add(remove);
         editor.Controls.Add(buttons, 0, 7);
         editor.SetColumnSpan(buttons, 2);
         split.Panel2.Controls.Add(editor);
 
-        WindowContent.Controls.Add(split);
+        surface.Controls.Add(split);
+        WindowContent.Controls.Add(surface);
         WindowContent.Layout += (_, _) =>
         {
             var scale = DeviceDpi / 96F;
-            var width = Math.Min((int)(1080 * scale), WindowContent.ClientSize.Width - WindowContent.Padding.Horizontal);
-            var height = Math.Min((int)(500 * scale), WindowContent.ClientSize.Height - WindowContent.Padding.Vertical);
-            split.SetBounds((WindowContent.ClientSize.Width - width) / 2, WindowContent.Padding.Top, width, height);
+            var width = Math.Min((int)(UiMetrics.ContentWidth * scale), WindowContent.ClientSize.Width - WindowContent.Padding.Horizontal);
+            var height = Math.Min((int)(460 * scale), WindowContent.ClientSize.Height - WindowContent.Padding.Vertical);
+            surface.SetBounds((WindowContent.ClientSize.Width - width) / 2, WindowContent.Padding.Top, width, height);
         };
         AcceptButton = save;
         CancelButton = close;

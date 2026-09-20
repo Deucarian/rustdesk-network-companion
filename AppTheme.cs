@@ -5,12 +5,13 @@ namespace Simultria.RustDeskCompanion;
 
 internal static class AppTheme
 {
-    internal static readonly Color Canvas = Color.FromArgb(251, 252, 253);
+    internal static readonly Color Canvas = Color.FromArgb(246, 248, 251);
     internal static readonly Color Ink = Color.FromArgb(21, 27, 38);
     internal static readonly Color Muted = Color.FromArgb(91, 105, 125);
     internal static readonly Color Line = Color.FromArgb(224, 229, 236);
     internal static readonly Color Blue = Color.FromArgb(0, 105, 245);
-    internal static readonly Color Selection = Color.FromArgb(234, 243, 255);
+    internal static readonly Color Selection = Color.FromArgb(239, 245, 253);
+    internal static readonly Color Badge = Color.FromArgb(240, 242, 246);
     internal static readonly Font Body = new("Segoe UI", 10.5F);
     internal static readonly Font Heading = new("Segoe UI Semibold", 20F, FontStyle.Bold);
     internal static readonly Font Strong = new("Segoe UI Semibold", 11F, FontStyle.Bold);
@@ -48,6 +49,15 @@ internal static class AppTheme
 }
 
 internal enum UiGlyph { None, Monitor, Globe, Network, Plus, Trash, Arrow, Info, Check }
+
+// Shared logical-pixel geometry, used by layout and owner-drawn controls alike.
+internal static class UiMetrics
+{
+    internal const int Gap = 8, Inset = 16, SectionGap = 24, PageInset = 32;
+    internal const int ButtonHeight = 36, RowHeight = 56, TableHeaderHeight = 40;
+    internal const int ContentWidth = 960, Radius = 10;
+    internal const int CellInset = 16, ComputerTextInset = 56;
+}
 
 internal static class GlyphPainter
 {
@@ -106,6 +116,8 @@ internal sealed class ModernButton : Button
     [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
     internal bool Primary { get; set; }
     [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    internal bool Quiet { get; set; }
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
     internal UiGlyph Glyph { get; set; }
     [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
     internal bool GlyphAfter { get; set; }
@@ -114,7 +126,7 @@ internal sealed class ModernButton : Button
 
     public ModernButton()
     {
-        Font = AppTheme.Body; Cursor = Cursors.Hand; Height = 36; FlatStyle = FlatStyle.Flat;
+        Font = AppTheme.Body; Cursor = Cursors.Hand; Height = UiMetrics.ButtonHeight; FlatStyle = FlatStyle.Flat;
         FlatAppearance.BorderSize = 0; UseVisualStyleBackColor = false;
         SetStyle(ControlStyles.UserPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
         Margin = new Padding(0, 0, 8, 0);
@@ -122,7 +134,7 @@ internal sealed class ModernButton : Button
 
     public override Size GetPreferredSize(Size proposedSize) => new(
         TextRenderer.MeasureText(Text, Font).Width + (int)Math.Round((Glyph == UiGlyph.None ? 28 : 52) * DeviceDpi / 96F),
-        Math.Max((int)Math.Round(36 * DeviceDpi / 96F), Font.Height + (int)Math.Round(12 * DeviceDpi / 96F)));
+        Math.Max((int)Math.Round(UiMetrics.ButtonHeight * DeviceDpi / 96F), Font.Height + (int)Math.Round(12 * DeviceDpi / 96F)));
 
     protected override void OnMouseEnter(EventArgs e) { hover = true; Invalidate(); base.OnMouseEnter(e); }
     protected override void OnMouseLeave(EventArgs e) { hover = false; pressed = false; Invalidate(); base.OnMouseLeave(e); }
@@ -139,11 +151,13 @@ internal sealed class ModernButton : Button
         var fill = !Enabled ? Color.FromArgb(239, 242, 246) : Primary
             ? (pressed ? Color.FromArgb(0, 77, 196) : hover ? Color.FromArgb(0, 91, 224) : AppTheme.Blue)
             : (pressed ? AppTheme.Selection : hover ? Color.FromArgb(244, 248, 253) : Color.White);
-        var ink = !Enabled ? AppTheme.Muted : Primary ? Color.White : AppTheme.Ink;
+        if (Quiet && !Primary && !hover && !pressed) fill = Parent?.BackColor ?? AppTheme.Canvas;
+        var ink = !Enabled || (Quiet && !Primary) ? AppTheme.Muted : Primary ? Color.White : AppTheme.Ink;
         using var shape = AppTheme.Round(new RectangleF(.75F, .75F, Width - 1.5F, Height - 1.5F), 7 * scale);
         using var brush = new SolidBrush(fill);
-        using var border = new Pen(Primary && Enabled ? fill : Color.FromArgb(167, 181, 201), scale);
-        e.Graphics.FillPath(brush, shape); e.Graphics.DrawPath(border, shape);
+        using var border = new Pen(Primary && Enabled ? fill : AppTheme.Line, scale);
+        e.Graphics.FillPath(brush, shape);
+        if (!Quiet || Primary) e.Graphics.DrawPath(border, shape);
         var textWidth = TextRenderer.MeasureText(Text, Font, Size.Empty, TextFormatFlags.NoPadding).Width;
         var iconSize = 18 * scale;
         var gap = Glyph == UiGlyph.None ? 0 : 8 * scale;
@@ -170,11 +184,19 @@ internal sealed class SurfacePanel : Panel
         DoubleBuffered = true; BackColor = Color.White;
         SetStyle(ControlStyles.ResizeRedraw, true);
     }
+    protected override void OnPaintBackground(PaintEventArgs e)
+    {
+        e.Graphics.Clear(Parent?.BackColor ?? AppTheme.Canvas);
+        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+        using var path = AppTheme.Round(new RectangleF(.5F, .5F, Width - 1, Height - 1), UiMetrics.Radius * DeviceDpi / 96F);
+        using var fill = new SolidBrush(BackColor);
+        e.Graphics.FillPath(fill, path);
+    }
     protected override void OnPaint(PaintEventArgs e)
     {
         base.OnPaint(e);
         e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-        using var path = AppTheme.Round(new RectangleF(.5F, .5F, Width - 1, Height - 1), 10 * DeviceDpi / 96F);
+        using var path = AppTheme.Round(new RectangleF(.5F, .5F, Width - 1, Height - 1), UiMetrics.Radius * DeviceDpi / 96F);
         using var pen = new Pen(AppTheme.Line);
         e.Graphics.DrawPath(pen, path);
     }
@@ -186,8 +208,8 @@ internal sealed class InputSurface : Panel
     public InputSurface(Control editor)
     {
         this.editor = editor;
-        Height = 36;
-        MinimumSize = new Size(100, 36);
+        Height = UiMetrics.ButtonHeight;
+        MinimumSize = new Size(100, UiMetrics.ButtonHeight);
         BackColor = Color.White;
         Margin = new Padding(0, 0, 0, 10);
         DoubleBuffered = true;

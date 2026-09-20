@@ -50,13 +50,14 @@ public sealed class ModernUiTests
         form.Size = new Size(width, height);
         form.PerformLayout();
         Application.DoEvents();
-        var names = new[] { "Connect", "RemoveComputer", "AddComputer", "ManageNetworks", "ComputersCard", "PageTitle", "PageSubtitle", "SelectedComputer", "SelectedRoute", "CurrentNetwork", "Status" };
+        var names = new[] { "Connect", "RemoveComputer", "AddComputer", "ManageNetworks", "ComputersCard", "Computers", "PageTitle", "PageSubtitle", "SelectedComputer", "SelectedRoute", "CurrentNetwork", "Status" };
         var controls = names.Select(n => Assert.Single(form.Controls.Find(n, true))).ToArray();
         foreach (var control in controls)
             Assert.True(control.Parent!.ClientRectangle.Contains(control.Bounds), $"{control.Name}: {control.Bounds}, parent {control.Parent.ClientRectangle}");
         for (var first = 0; first < controls.Length; first++)
         for (var second = first + 1; second < controls.Length; second++)
-            Assert.False(controls[first].Bounds.IntersectsWith(controls[second].Bounds), $"{controls[first].Name} overlaps {controls[second].Name}");
+            if (controls[first].Parent == controls[second].Parent)
+                Assert.False(controls[first].Bounds.IntersectsWith(controls[second].Bounds), $"{controls[first].Name} overlaps {controls[second].Name}");
         Assert.All(controls.OfType<ModernButton>(), b => Assert.True(b.Width >= b.GetPreferredSize(Size.Empty).Width - 2, b.Name));
     });
 
@@ -72,11 +73,30 @@ public sealed class ModernUiTests
             form.Size = size;
             form.PerformLayout();
             Application.DoEvents();
-            Assert.InRange(grid.Rows[0].Height, 52, 60);
+            Assert.InRange(grid.Rows[0].Height, UiMetrics.RowHeight, UiMetrics.RowHeight + 4);
             Assert.Equal(3, grid.Rows.Count);
-            Assert.True(Find<SurfacePanel>(form, "ComputersCard").Width <= 1080);
-            Assert.True(Find<SurfacePanel>(form, "ComputersCard").Height <= grid.ContentHeight + 4);
+            Assert.True(Find<SurfacePanel>(form, "ComputersCard").Width <= UiMetrics.ContentWidth);
+            Assert.True(grid.Height <= grid.ContentHeight);
         }
+    });
+
+    [Fact]
+    public void DashboardHasOnePrimaryActionAndOneSharedFrame() => OnSta(() =>
+    {
+        using var form = new MainForm(Settings(3));
+        Load(form);
+        var primary = Assert.Single(Descendants(form).OfType<ModernButton>(), b => b.Primary);
+        Assert.Equal("Connect", primary.Name);
+        Assert.True(Find<ModernButton>(form, "ManageNetworks").Quiet);
+        Assert.True(Find<ModernButton>(form, "RemoveComputer").Quiet);
+        var card = Assert.Single(Descendants(form).OfType<SurfacePanel>());
+        Assert.Same(card, primary.Parent);
+        Assert.Same(card, Find<ComputerGrid>(form, "Computers").Parent);
+        Assert.Same(card, Find<Label>(form, "SelectedComputer").Parent);
+        var grid = Find<ComputerGrid>(form, "Computers");
+        Assert.Equal(grid.Left + UiMetrics.CellInset, Find<Label>(form, "SelectedComputer").Left);
+        Assert.Equal(grid.Right - UiMetrics.CellInset, primary.Right);
+        Assert.Single(Descendants(form).OfType<Divider>());
     });
 
     [Fact]

@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
     [string]$Source = (Join-Path $PSScriptRoot '..\Assets\RustDeskHop.png'),
-    [string]$Destination = (Join-Path $PSScriptRoot '..\Assets\RustDeskHop.ico'),
+    [string]$Destination = (Join-Path $PSScriptRoot '..\obj\branding\RustDeskHop.ico'),
+    [string]$LogoDestination,
     [ValidateRange(0, 0.2)]
     [double]$PaddingFraction = 0.015625,
     [ValidateRange(1, 255)]
@@ -11,15 +12,52 @@ param(
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Drawing
 
-# Ignore near-transparent export speckles when finding the artwork's bounds.
-# The approved PNG is never written, redrawn, stretched, or recolored.
+# One master image supplies all outputs. Never write back to that master.
 if (-not ('RustDeskHopIconBounds' -as [type])) {
     $drawingAssemblies = @([System.Drawing.Bitmap].Assembly.Location, [System.Drawing.Rectangle].Assembly.Location) | Select-Object -Unique
     Add-Type -ReferencedAssemblies $drawingAssemblies -TypeDefinition @'
 using System;
 using System.Drawing;
+using System.Drawing.Imaging;
+using System.Collections.Generic;
 public static class RustDeskHopIconBounds
 {
+    public static Bitmap Load(string path)
+    {
+        using (var source = new Bitmap(path))
+        {
+            var image = new Bitmap(source.Width, source.Height, PixelFormat.Format32bppArgb);
+            using (var graphics = Graphics.FromImage(image)) graphics.DrawImageUnscaled(source, 0, 0);
+            // Accept either a transparent master or the approved white-tile
+            // preview on black. Only the connected exterior matte is decoded;
+            // the rabbit and the opaque tile interior are never recolored.
+            foreach (var point in new[] { new Point(0, 0), new Point(image.Width - 1, 0),
+                new Point(0, image.Height - 1), new Point(image.Width - 1, image.Height - 1) })
+            {
+                var c = image.GetPixel(point.X, point.Y);
+                if (c.A != 255 || Math.Max(c.R, Math.Max(c.G, c.B)) > 16) return image;
+            }
+            var visited = new bool[image.Width * image.Height];
+            var queue = new Queue<int>();
+            queue.Enqueue(0);
+            while (queue.Count > 0)
+            {
+                int index = queue.Dequeue();
+                if (visited[index]) continue;
+                visited[index] = true;
+                int x = index % image.Width, y = index / image.Width;
+                var c = image.GetPixel(x, y);
+                int max = Math.Max(c.R, Math.Max(c.G, c.B)), min = Math.Min(c.R, Math.Min(c.G, c.B));
+                if (max >= 252 || (max > 64 && max - min > 8)) continue;
+                image.SetPixel(x, y, max <= 64 ? Color.Transparent : Color.FromArgb(max, 255, 255, 255));
+                if (x > 0) queue.Enqueue(index - 1);
+                if (x + 1 < image.Width) queue.Enqueue(index + 1);
+                if (y > 0) queue.Enqueue(index - image.Width);
+                if (y + 1 < image.Height) queue.Enqueue(index + image.Width);
+            }
+            return image;
+        }
+    }
     public static Rectangle Measure(Bitmap image, byte alphaThreshold)
     {
         int left = image.Width, top = image.Height, right = -1, bottom = -1;
@@ -39,7 +77,7 @@ public static class RustDeskHopIconBounds
 
 # Only crop transparent padding and uniformly resize/encode; never redraw or recolor.
 $sizes = @(16, 20, 24, 32, 40, 48, 64, 128, 256)
-$sourceImage = [System.Drawing.Bitmap]::FromFile((Resolve-Path -LiteralPath $Source))
+$sourceImage = [RustDeskHopIconBounds]::Load((Resolve-Path -LiteralPath $Source).Path)
 $frames = [System.Collections.Generic.List[byte[]]]::new()
 try {
     if ($sourceImage.Width -ne $sourceImage.Height) { throw 'The application icon source must be square.' }
@@ -76,6 +114,7 @@ try {
 }
 
 $destinationPath = [System.IO.Path]::GetFullPath($Destination)
+[System.IO.Directory]::CreateDirectory([System.IO.Path]::GetDirectoryName($destinationPath)) | Out-Null
 $output = [System.IO.File]::Create($destinationPath)
 $writer = [System.IO.BinaryWriter]::new($output)
 try {
@@ -102,3 +141,10 @@ try {
 }
 
 Write-Output "Created $destinationPath with sizes $($sizes -join ', ')."
+if ($LogoDestination) {
+    $logoPath = [System.IO.Path]::GetFullPath($LogoDestination)
+    [System.IO.Directory]::CreateDirectory([System.IO.Path]::GetDirectoryName($logoPath)) | Out-Null
+    # The application header uses the exact same normalized 256px frame as the ICO.
+    [System.IO.File]::WriteAllBytes($logoPath, $frames[$frames.Count - 1])
+    Write-Output "Created $logoPath from the same master."
+}
