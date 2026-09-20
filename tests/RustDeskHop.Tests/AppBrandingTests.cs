@@ -30,6 +30,43 @@ public sealed class AppBrandingTests
     }
 
     [Fact]
+    public void WindowsIconFramesFillTheirCanvasWithBalancedPadding()
+    {
+        using var stream = typeof(AppBranding).Assembly.GetManifestResourceStream(AppBranding.IconResourceName)!;
+        using var reader = new BinaryReader(stream);
+        reader.ReadUInt16(); reader.ReadUInt16();
+        var count = reader.ReadUInt16();
+        var frames = new List<(int Size, int Length, int Offset)>();
+        for (var index = 0; index < count; index++)
+        {
+            var size = reader.ReadByte();
+            reader.ReadBytes(7);
+            frames.Add((size == 0 ? 256 : size, reader.ReadInt32(), reader.ReadInt32()));
+        }
+        foreach (var frame in frames)
+        {
+            stream.Position = frame.Offset;
+            using var png = new MemoryStream(reader.ReadBytes(frame.Length));
+            using var image = new Bitmap(png);
+            var left = image.Width; var top = image.Height; var right = -1; var bottom = -1;
+            for (var y = 0; y < image.Height; y++)
+            for (var x = 0; x < image.Width; x++)
+            {
+                if (image.GetPixel(x, y).A < 128) continue;
+                left = Math.Min(left, x); top = Math.Min(top, y);
+                right = Math.Max(right, x); bottom = Math.Max(bottom, y);
+            }
+            Assert.Equal(frame.Size, image.Width);
+            Assert.Equal(frame.Size, image.Height);
+            Assert.True(right - left + 1 >= frame.Size * .85, $"The {frame.Size}px frame has excessive horizontal padding.");
+            Assert.True(bottom - top + 1 >= frame.Size * .90, $"The {frame.Size}px frame has excessive vertical padding.");
+            Assert.InRange(Math.Abs(left - (image.Width - 1 - right)), 0, 1);
+            Assert.InRange(Math.Abs(top - (image.Height - 1 - bottom)), 0, 1);
+            Assert.Equal(0, image.GetPixel(0, 0).A);
+        }
+    }
+
+    [Fact]
     public void EmbeddedArtworkLoadsWithoutExternalFiles()
     {
         Assert.NotEqual(IntPtr.Zero, AppBranding.Icon.Handle);

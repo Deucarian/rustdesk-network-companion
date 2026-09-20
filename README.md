@@ -105,6 +105,8 @@ The approved rabbit artwork is used by the executable, taskbar, all application 
 
 To rebuild the ICO after updating the PNG, run `powershell -File tools\Build-ApplicationIcon.ps1` on Windows. For existing Windows shortcuts, use the updated `RustDeskHop.exe` (icon index 0) or `Assets\RustDeskHop.ico` as the icon source. RustDesk itself retains its own icon.
 
+The ICO generator trims the unused alpha padding and scales the artwork uniformly into each Windows icon size, with a small balanced safety margin. It ignores near-transparent export speckles when measuring the bounds; neither PNG artwork file is modified or redrawn.
+
 ## Branches and automation
 
 - `develop` is the integration branch for ongoing work.
