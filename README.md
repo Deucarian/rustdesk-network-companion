@@ -61,9 +61,9 @@ After those one-time steps, future connections should require only selecting the
 
 ### The desktop interface
 
-The light interface uses a rounded computer list, a pale-blue selection, and distinct Public/Private badges. The selected computer and its route appear beside **Connect**. Use **Add computer**, **Remove computer**, and **Manage networks** to maintain your saved connections. Arrow keys move through the computer list; Enter connects. Longer names wrap and longer lists scroll.
+The light interface puts the computer list and connection actions in one rounded frame. **Connect** is the single blue primary action; **Add computer**, **Remove**, and **Manage networks** are quieter maintenance actions. A soft selection and neutral Public/Private badges keep the focus on the chosen computer. Default-network information sits in the muted footer. Arrow keys move through the computer list; Enter connects. Longer names wrap and longer lists scroll.
 
-The rabbit icon stays in the title bar and taskbar, without a second oversized logo in the content. Network settings and the add-computer dialog share the same styling. These presentation changes do not change RustDesk routing or close existing sessions.
+The rabbit icon stays in the title bar and taskbar, without a second oversized logo in the content. All windows use real Windows caption controls (minimize, maximize/restore, close), native resizing, snapping and the system menu—not text-symbol imitations. On Windows 11, the title bar blends into the app's light canvas using [Windows' supported caption-colour attributes](https://learn.microsoft.com/en-us/windows/win32/api/dwmapi/ne-dwmapi-dwmwindowattribute); older Windows versions retain standard system chrome, and high-contrast mode retains system caption colours. Network settings and the add-computer dialog share the same styling. These presentation changes do not change RustDesk routing or close existing sessions.
 
 ### Incoming connections to this PC
 
@@ -99,11 +99,15 @@ The executable is produced under `bin\Release\net9.0-windows\`.
 
 ### Application icon
 
-The approved rabbit artwork is used by the executable, taskbar, all application windows, and this README. The PNG and multi-resolution Windows ICO live in `Assets/` and are embedded in the application, so the standalone EXE does not need external image files. Download ZIPs also include the assets for shortcuts and other integrations.
+**Edit only `Assets/RustDeskHop.png`.** This is the single master for the approved blue-on-white rabbit artwork and the README. Do not maintain separate source, title-bar, taskbar or shortcut artwork.
 
-`Assets/RustDeskHop.source.png` preserves the approved original; `Assets/RustDeskHop.png` is the transparent-background production version.
+Every Windows build automatically runs `tools/Build-ApplicationIcon.ps1` when the master changes. It generates a transparent, uniformly padded PNG and a multi-resolution ICO under the build's intermediate `branding` directory. Both are embedded in the executable and copied into release `Assets/`; generated files are not committed. The header PNG is the same 256px frame contained in the ICO.
 
-To rebuild the ICO after updating the PNG, run `powershell -File tools\Build-ApplicationIcon.ps1` on Windows. For existing Windows shortcuts, use the updated `RustDeskHop.exe` (icon index 0) or `Assets\RustDeskHop.ico` as the icon source. RustDesk itself retains its own icon.
+The master can have transparency or the approved white tile on a black presentation backdrop. The generator decodes only the connected exterior black matte, trims the unused padding, and scales uniformly without redrawing the artwork. Replace that one PNG and rebuild; no other artwork file needs editing.
+
+For local deployment, `tools/Update-LocalBranding.ps1 -InstallDirectory <installed app folder>` refreshes only existing RustDeskHop shortcuts targeting that installation. Its cache-keyed icon copy is derived automatically from the generated ICO, never edited independently. RustDesk itself retains its own icon.
+
+To update an existing local installation, close RustDeskHop (leave RustDesk running), publish, then run `tools/Install-Local.ps1 -PublishDirectory <publish folder> -InstallDirectory <app folder> -BackupDirectory <new backup folder>`. This backs up the previous files and matching shortcuts, installs the generated assets, and automatically refreshes the shortcut icons. It does not create startup items or change saved computers, network settings, or RustDesk services.
 
 ## Branches and automation
 
