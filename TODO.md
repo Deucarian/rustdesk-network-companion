@@ -2,6 +2,8 @@
 
 ## Priority: refine UI sizing and match the approved design
 
+- [x] Remove the remaining added transparent icon margin so the unchanged master fills Windows taskbar frames more fully. Keep this follow-up on develop, separate from the desktop-polish promotion to main.
+- [ ] Review a RustDesk-logo/bunny composite concept before replacing the current master; keep this exploration develop-only and verify upstream logo-use terms before any public adoption.
 - [x] Compare real RustDesk/RustDeskHop screenshots and replace the handmade title bar (text-symbol caption buttons and padded strip) with native Windows chrome, a matching light caption and compact window sizes. Screenshot-check the dashboard, maximize/restore and both editors at 100%; check native minimize/restore and the right-click system menu. Keep the window theme shared across every form.
 - [x] Rework visual hierarchy after the compact-sizing pass: one primary Connect action, one shared list/action frame, quiet maintenance controls, neutral network badges, consistent spacing tokens and matching framed dialogs.
 - [x] Adopt the approved blue-on-white icon with one editable master (`Assets/RustDeskHop.png`), automatically generated build assets and automatic local shortcut refresh during deployment.

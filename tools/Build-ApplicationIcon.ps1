@@ -4,7 +4,7 @@ param(
     [string]$Destination = (Join-Path $PSScriptRoot '..\obj\branding\RustDeskHop.ico'),
     [string]$LogoDestination,
     [ValidateRange(0, 0.2)]
-    [double]$PaddingFraction = 0.015625,
+    [double]$PaddingFraction = 0,
     [ValidateRange(1, 255)]
     [byte]$AlphaThreshold = 16
 )
@@ -82,7 +82,8 @@ $frames = [System.Collections.Generic.List[byte[]]]::new()
 try {
     if ($sourceImage.Width -ne $sourceImage.Height) { throw 'The application icon source must be square.' }
     $artBounds = [RustDeskHopIconBounds]::Measure($sourceImage, $AlphaThreshold)
-    # Retain a source-pixel guard around the visible edge for antialiasing.
+    # Fill the icon frame without an added transparent margin. Retain only a
+    # source-pixel guard for antialiasing; never stretch or clip the artwork.
     $artBounds.Inflate(1, 1)
     $artBounds.Intersect([System.Drawing.Rectangle]::new(0, 0, $sourceImage.Width, $sourceImage.Height))
     Write-Output "Visible source bounds: $artBounds. Uniform frame padding: $($PaddingFraction * 100)% per side."
@@ -144,7 +145,7 @@ Write-Output "Created $destinationPath with sizes $($sizes -join ', ')."
 if ($LogoDestination) {
     $logoPath = [System.IO.Path]::GetFullPath($LogoDestination)
     [System.IO.Directory]::CreateDirectory([System.IO.Path]::GetDirectoryName($logoPath)) | Out-Null
-    # The application header uses the exact same normalized 256px frame as the ICO.
+    # The preview PNG uses the exact same normalized 256px frame as the ICO.
     [System.IO.File]::WriteAllBytes($logoPath, $frames[$frames.Count - 1])
     Write-Output "Created $logoPath from the same master."
 }
