@@ -58,8 +58,9 @@ public sealed class AppBrandingTests
             }
             Assert.Equal(frame.Size, image.Width);
             Assert.Equal(frame.Size, image.Height);
-            Assert.True(right - left + 1 >= frame.Size * .85, $"The {frame.Size}px frame has excessive horizontal padding.");
-            Assert.True(bottom - top + 1 >= frame.Size * .90, $"The {frame.Size}px frame has excessive vertical padding.");
+            // Fractional edge coverage rounds to whole pixels at tiny taskbar sizes.
+            Assert.True(right - left + 1 >= Math.Floor(frame.Size * .95), $"The {frame.Size}px frame has excessive horizontal padding.");
+            Assert.True(bottom - top + 1 >= Math.Floor(frame.Size * .98), $"The {frame.Size}px frame has excessive vertical padding.");
             Assert.InRange(Math.Abs(left - (image.Width - 1 - right)), 0, 1);
             Assert.InRange(Math.Abs(top - (image.Height - 1 - bottom)), 0, 1);
             Assert.Equal(0, image.GetPixel(0, 0).A);

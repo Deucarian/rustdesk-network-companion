@@ -101,7 +101,7 @@ The executable is produced under `bin\Release\net9.0-windows\`.
 
 **Edit only `Assets/RustDeskHop.png`.** This is the single master for the approved blue-on-white rabbit artwork and the README. Do not maintain separate source, title-bar, taskbar or shortcut artwork.
 
-Every Windows build automatically runs `tools/Build-ApplicationIcon.ps1` when the master changes. It generates a transparent, uniformly padded PNG and a multi-resolution ICO under the build's intermediate `branding` directory. Both are embedded in the executable and copied into release `Assets/`; generated files are not committed. The header PNG is the same 256px frame contained in the ICO.
+Every Windows build automatically runs `tools/Build-ApplicationIcon.ps1` when the master changes. It trims the transparent exterior and fits the unchanged artwork into a PNG and a multi-resolution ICO without an added transparent margin. Aspect ratio and antialiased edges are preserved. Outputs go under the build's intermediate `branding` directory, are embedded in the executable and copied into release `Assets/`; generated files are not committed. The preview PNG is the same 256px frame contained in the ICO.
 
 The master can have transparency or the approved white tile on a black presentation backdrop. The generator decodes only the connected exterior black matte, trims the unused padding, and scales uniformly without redrawing the artwork. Replace that one PNG and rebuild; no other artwork file needs editing.
 
