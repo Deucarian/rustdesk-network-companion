@@ -30,7 +30,7 @@ internal static class AppBranding
 
 internal abstract class BrandedForm : Form
 {
-    protected Panel WindowContent { get; } = new() { Dock = DockStyle.Fill };
+    protected Panel WindowContent { get; } = new() { Name = "WindowContent", Dock = DockStyle.Fill };
 
     protected BrandedForm()
     {
@@ -41,64 +41,40 @@ internal abstract class BrandedForm : Form
         Font = AppTheme.Body;
         BackColor = AppTheme.Canvas;
         ForeColor = AppTheme.Ink;
-        // Expose a narrow form-owned edge so child controls cannot swallow
-        // native resize hit tests after extending the client area into the frame.
-        Padding = new Padding(6);
+        // Keep the actual non-client area. Windows owns caption buttons, hit testing,
+        // accessibility, snap layouts, system menus and per-monitor frame sizing.
+        Padding = Padding.Empty;
         DoubleBuffered = true;
         Controls.Add(WindowContent);
-        Controls.Add(new WindowHeader(this));
     }
 
     protected override void OnHandleCreated(EventArgs e)
     {
         base.OnHandleCreated(e);
-        var corners = 2;
-        NativeWindowStyle.DwmSetWindowAttribute(Handle, 33, ref corners, sizeof(int));
-        var margins = new NativeWindowStyle.Margins { Left = 1, Right = 1, Top = 1, Bottom = 1 };
-        NativeWindowStyle.DwmExtendFrameIntoClientArea(Handle, ref margins);
+        ApplyWindowTheme();
+    }
+
+    protected override void OnActivated(EventArgs e)
+    {
+        base.OnActivated(e);
+        ApplyWindowTheme(true);
+    }
+
+    protected override void OnDeactivate(EventArgs e)
+    {
+        base.OnDeactivate(e);
+        ApplyWindowTheme(false);
     }
 
     protected override void WndProc(ref Message message)
     {
-        const int NonClientCalculate = 0x0083, NonClientHitTest = 0x0084, GetMinMax = 0x0024;
-        if (message.Msg == NonClientCalculate && message.WParam != IntPtr.Zero)
-        {
-            message.Result = IntPtr.Zero;
-            return;
-        }
-        if (message.Msg == NonClientHitTest)
-        {
-            var point = PointToClient(new Point(unchecked((short)(long)message.LParam), unchecked((short)((long)message.LParam >> 16))));
-            var edge = Math.Max(5, (int)(6 * DeviceDpi / 96F));
-            var sizable = FormBorderStyle is FormBorderStyle.Sizable or FormBorderStyle.SizableToolWindow;
-            var hit = 1;
-            if (sizable && WindowState == FormWindowState.Normal)
-            {
-                var left = point.X < edge; var right = point.X >= ClientSize.Width - edge;
-                var top = point.Y < edge; var bottom = point.Y >= ClientSize.Height - edge;
-                hit = top ? (left ? 13 : right ? 14 : 12) : bottom ? (left ? 16 : right ? 17 : 15) : left ? 10 : right ? 11 : 1;
-            }
-            message.Result = (IntPtr)hit;
-            return;
-        }
         base.WndProc(ref message);
-        if (message.Msg == GetMinMax)
-        {
-            var screen = Screen.FromHandle(Handle);
-            var info = System.Runtime.InteropServices.Marshal.PtrToStructure<MinMaxInfo>(message.LParam);
-            info.MaxPosition = new Point(screen.WorkingArea.Left - screen.Bounds.Left, screen.WorkingArea.Top - screen.Bounds.Top);
-            info.MaxSize = screen.WorkingArea.Size;
-            System.Runtime.InteropServices.Marshal.StructureToPtr(info, message.LParam, false);
-        }
+        // A theme/accessibility change must not leave forced caption colours behind.
+        if (message.Msg is 0x001A or 0x031A) ApplyWindowTheme();
     }
 
-    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
-    private struct MinMaxInfo
+    private void ApplyWindowTheme(bool? active = null)
     {
-        internal Point Reserved;
-        internal Size MaxSize;
-        internal Point MaxPosition;
-        internal Size MinTrackSize;
-        internal Size MaxTrackSize;
+        if (IsHandleCreated) NativeWindowTheme.Apply(Handle, active ?? ActiveForm == this);
     }
 }

@@ -19,7 +19,7 @@ public sealed class ModernUiTests
         Assert.True(Find<ModernButton>(form, "AddComputer").Enabled);
         Assert.Contains(Descendants(form).OfType<Label>(), l => l.Text.Contains("No computers yet"));
         Assert.Empty(form.Controls.Find("ApplicationLogo", true));
-        Assert.Single(form.Controls.Find("TitleBarIcon", true));
+        Assert.Empty(form.Controls.Find("TitleBarIcon", true));
     });
 
     [Fact]
@@ -40,8 +40,9 @@ public sealed class ModernUiTests
     });
 
     [Theory]
-    [InlineData(940, 640)]
-    [InlineData(1040, 684)]
+    [InlineData(740, 480)]
+    [InlineData(916, 529)]
+    [InlineData(900, 530)]
     [InlineData(1440, 940)]
     public void MainActionsFitWithoutOverlapping(int width, int height) => OnSta(() =>
     {
@@ -50,13 +51,14 @@ public sealed class ModernUiTests
         form.Size = new Size(width, height);
         form.PerformLayout();
         Application.DoEvents();
-        var names = new[] { "Connect", "RemoveComputer", "AddComputer", "ManageNetworks", "ComputersCard" };
+        var names = new[] { "Connect", "RemoveComputer", "AddComputer", "ManageNetworks", "ComputersCard", "Computers", "PageTitle", "PageSubtitle", "SelectedComputer", "SelectedRoute", "CurrentNetwork", "Status" };
         var controls = names.Select(n => Assert.Single(form.Controls.Find(n, true))).ToArray();
         foreach (var control in controls)
             Assert.True(control.Parent!.ClientRectangle.Contains(control.Bounds), $"{control.Name}: {control.Bounds}, parent {control.Parent.ClientRectangle}");
         for (var first = 0; first < controls.Length; first++)
         for (var second = first + 1; second < controls.Length; second++)
-            Assert.False(controls[first].Bounds.IntersectsWith(controls[second].Bounds), $"{controls[first].Name} overlaps {controls[second].Name}");
+            if (controls[first].Parent == controls[second].Parent)
+                Assert.False(controls[first].Bounds.IntersectsWith(controls[second].Bounds), $"{controls[first].Name} overlaps {controls[second].Name}");
         Assert.All(controls.OfType<ModernButton>(), b => Assert.True(b.Width >= b.GetPreferredSize(Size.Empty).Width - 2, b.Name));
     });
 
@@ -67,14 +69,35 @@ public sealed class ModernUiTests
         Load(form);
         var grid = Find<ComputerGrid>(form, "Computers");
         for (var iteration = 0; iteration < 4; iteration++)
-        foreach (var size in new[] { new Size(1920, 1040), new Size(940, 640), new Size(1040, 684) })
+        foreach (var size in new[] { new Size(1920, 1040), new Size(740, 480), new Size(900, 530) })
         {
             form.Size = size;
             form.PerformLayout();
             Application.DoEvents();
-            Assert.True(grid.Rows[0].Height >= 64);
+            Assert.InRange(grid.Rows[0].Height, UiMetrics.RowHeight, UiMetrics.RowHeight + 4);
             Assert.Equal(3, grid.Rows.Count);
+            Assert.True(Find<SurfacePanel>(form, "ComputersCard").Width <= UiMetrics.ContentWidth);
+            Assert.True(grid.Height <= grid.ContentHeight);
         }
+    });
+
+    [Fact]
+    public void DashboardHasOnePrimaryActionAndOneSharedFrame() => OnSta(() =>
+    {
+        using var form = new MainForm(Settings(3));
+        Load(form);
+        var primary = Assert.Single(Descendants(form).OfType<ModernButton>(), b => b.Primary);
+        Assert.Equal("Connect", primary.Name);
+        Assert.True(Find<ModernButton>(form, "ManageNetworks").Quiet);
+        Assert.True(Find<ModernButton>(form, "RemoveComputer").Quiet);
+        var card = Assert.Single(Descendants(form).OfType<SurfacePanel>());
+        Assert.Same(card, primary.Parent);
+        Assert.Same(card, Find<ComputerGrid>(form, "Computers").Parent);
+        Assert.Same(card, Find<Label>(form, "SelectedComputer").Parent);
+        var grid = Find<ComputerGrid>(form, "Computers");
+        Assert.Equal(grid.Left + UiMetrics.CellInset, Find<Label>(form, "SelectedComputer").Left);
+        Assert.Equal(grid.Right - UiMetrics.CellInset, primary.Right);
+        Assert.Single(Descendants(form).OfType<Divider>());
     });
 
     [Fact]
@@ -99,18 +122,69 @@ public sealed class ModernUiTests
         var settings = Settings(3);
         using var target = new TargetEditorForm(settings.Profiles, null);
         using var networks = new ProfilesForm(settings.Profiles);
-        foreach (var form in new Form[] { target, networks })
+        using var signIn = new PublicSignInForm("not-launched-during-this-test.exe");
+        // Construct only: showing the sign-in form would launch RustDesk.
+        foreach (var form in new Form[] { target, networks, signIn })
         {
             _ = form.Handle;
             form.PerformLayout();
             foreach (var field in Descendants(form).OfType<InputSurface>())
             {
                 Assert.True(field.Parent!.ClientRectangle.Contains(field.Bounds), $"Field exceeds editor: {field.Bounds}");
-                Assert.True(field.Height >= 40);
+                Assert.True(field.Height >= 36);
             }
-            var buttons = Descendants(form).OfType<Button>().Where(b => b.AccessibleName is not ("Minimize" or "Maximize or restore" or "Close"));
+            var buttons = Descendants(form).OfType<Button>();
             Assert.All(buttons, b => Assert.IsType<ModernButton>(b));
         }
+    });
+
+    [Theory]
+    [InlineData(780, 490)]
+    [InlineData(780, 530)]
+    [InlineData(860, 540)]
+    [InlineData(1920, 1040)]
+    public void NetworkEditorStaysInsideEveryContainer(int width, int height) => OnSta(() =>
+    {
+        using var form = new ProfilesForm(Settings(3).Profiles);
+        form.Show();
+        form.Size = new Size(width, height);
+        form.PerformLayout();
+        Application.DoEvents();
+        var split = Assert.Single(Descendants(form).OfType<SplitContainer>());
+        Assert.True(split.Width <= 1080);
+        Assert.True(split.Height <= 500);
+        foreach (var control in Descendants(form).Where(c => c is InputSurface or ModernButton))
+        {
+            for (var parent = control.Parent; parent is not null; parent = parent.Parent)
+            {
+                var bounds = parent.RectangleToClient(control.RectangleToScreen(control.ClientRectangle));
+                Assert.True(parent.ClientRectangle.Contains(bounds), $"{control.GetType().Name} {control.Text} {bounds} exceeds {parent.GetType().Name} {parent.ClientRectangle}");
+            }
+        }
+    });
+
+    [Fact]
+    public void LongSelectedLabelsWrapWithoutOverlappingActions() => OnSta(() =>
+    {
+        var settings = Settings(3);
+        settings.Targets[1].Name = "A long computer name that needs several lines in the selected computer summary";
+        settings.Profiles[1].Name = "A long private network name that should remain fully readable beside the action buttons";
+        using var form = new MainForm(settings);
+        Load(form);
+        form.Size = form.MinimumSize;
+        var grid = Find<ComputerGrid>(form, "Computers");
+        grid.CurrentCell = grid.Rows[1].Cells[0];
+        Application.DoEvents();
+        var name = Find<Label>(form, "SelectedComputer");
+        var route = Find<Label>(form, "SelectedRoute");
+        foreach (var label in new[] { name, route })
+        {
+            var needed = TextRenderer.MeasureText(label.Text, label.Font, new Size(label.Width, int.MaxValue), TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix);
+            Assert.True(label.Height >= needed.Height);
+            Assert.False(label.Bounds.IntersectsWith(Find<ModernButton>(form, "RemoveComputer").Bounds));
+            Assert.False(label.Bounds.IntersectsWith(Find<ModernButton>(form, "Connect").Bounds));
+        }
+        Assert.True(name.Bottom <= route.Top);
     });
 
     private static void Load(MainForm form)

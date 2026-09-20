@@ -1,22 +1,21 @@
 using System.Drawing.Drawing2D;
-using System.Runtime.InteropServices;
 
 namespace Simultria.RustDeskCompanion;
 
 internal static class AppTheme
 {
-    internal static readonly Color Canvas = Color.FromArgb(251, 252, 253);
+    internal static readonly Color Canvas = Color.FromArgb(246, 248, 251);
     internal static readonly Color Ink = Color.FromArgb(21, 27, 38);
     internal static readonly Color Muted = Color.FromArgb(91, 105, 125);
     internal static readonly Color Line = Color.FromArgb(224, 229, 236);
+    internal static readonly Color WindowBorder = Color.FromArgb(199, 208, 220);
     internal static readonly Color Blue = Color.FromArgb(0, 105, 245);
-    internal static readonly Color Selection = Color.FromArgb(234, 243, 255);
-    internal static readonly Font Body = new("Segoe UI", 13F);
-    internal static readonly Font Heading = new("Segoe UI Semibold", 24F, FontStyle.Bold);
-    internal static readonly Font Strong = new("Segoe UI Semibold", 13.5F, FontStyle.Bold);
-    internal static readonly Font Small = new("Segoe UI", 11.5F);
-    internal static readonly Font Caption = new("Segoe UI Semibold", 12F);
-    internal static readonly Font CaptionSymbol = new("Segoe UI", 15F);
+    internal static readonly Color Selection = Color.FromArgb(239, 245, 253);
+    internal static readonly Color Badge = Color.FromArgb(240, 242, 246);
+    internal static readonly Font Body = new("Segoe UI", 10.5F);
+    internal static readonly Font Heading = new("Segoe UI Semibold", 20F, FontStyle.Bold);
+    internal static readonly Font Strong = new("Segoe UI Semibold", 11F, FontStyle.Bold);
+    internal static readonly Font Small = new("Segoe UI", 9.5F);
 
     internal static GraphicsPath Round(RectangleF bounds, float radius)
     {
@@ -48,6 +47,15 @@ internal static class AppTheme
 }
 
 internal enum UiGlyph { None, Monitor, Globe, Network, Plus, Trash, Arrow, Info, Check }
+
+// Shared logical-pixel geometry, used by layout and owner-drawn controls alike.
+internal static class UiMetrics
+{
+    internal const int Gap = 8, Inset = 16, SectionGap = 24, PageInset = 32;
+    internal const int ButtonHeight = 36, RowHeight = 56, TableHeaderHeight = 40;
+    internal const int ContentWidth = 960, Radius = 10;
+    internal const int CellInset = 16, ComputerTextInset = 56;
+}
 
 internal static class GlyphPainter
 {
@@ -106,6 +114,8 @@ internal sealed class ModernButton : Button
     [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
     internal bool Primary { get; set; }
     [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    internal bool Quiet { get; set; }
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
     internal UiGlyph Glyph { get; set; }
     [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
     internal bool GlyphAfter { get; set; }
@@ -114,14 +124,15 @@ internal sealed class ModernButton : Button
 
     public ModernButton()
     {
-        Font = AppTheme.Body; Cursor = Cursors.Hand; Height = 46; FlatStyle = FlatStyle.Flat;
+        Font = AppTheme.Body; Cursor = Cursors.Hand; Height = UiMetrics.ButtonHeight; FlatStyle = FlatStyle.Flat;
         FlatAppearance.BorderSize = 0; UseVisualStyleBackColor = false;
         SetStyle(ControlStyles.UserPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
-        Margin = new Padding(0, 0, 12, 0);
+        Margin = new Padding(0, 0, 8, 0);
     }
 
     public override Size GetPreferredSize(Size proposedSize) => new(
-        TextRenderer.MeasureText(Text, Font).Width + (Glyph == UiGlyph.None ? 36 : 62), (int)Math.Round(46 * DeviceDpi / 96F));
+        TextRenderer.MeasureText(Text, Font).Width + (int)Math.Round((Glyph == UiGlyph.None ? 28 : 52) * DeviceDpi / 96F),
+        Math.Max((int)Math.Round(UiMetrics.ButtonHeight * DeviceDpi / 96F), Font.Height + (int)Math.Round(12 * DeviceDpi / 96F)));
 
     protected override void OnMouseEnter(EventArgs e) { hover = true; Invalidate(); base.OnMouseEnter(e); }
     protected override void OnMouseLeave(EventArgs e) { hover = false; pressed = false; Invalidate(); base.OnMouseLeave(e); }
@@ -138,14 +149,16 @@ internal sealed class ModernButton : Button
         var fill = !Enabled ? Color.FromArgb(239, 242, 246) : Primary
             ? (pressed ? Color.FromArgb(0, 77, 196) : hover ? Color.FromArgb(0, 91, 224) : AppTheme.Blue)
             : (pressed ? AppTheme.Selection : hover ? Color.FromArgb(244, 248, 253) : Color.White);
-        var ink = !Enabled ? AppTheme.Muted : Primary ? Color.White : AppTheme.Ink;
+        if (Quiet && !Primary && !hover && !pressed) fill = Parent?.BackColor ?? AppTheme.Canvas;
+        var ink = !Enabled || (Quiet && !Primary) ? AppTheme.Muted : Primary ? Color.White : AppTheme.Ink;
         using var shape = AppTheme.Round(new RectangleF(.75F, .75F, Width - 1.5F, Height - 1.5F), 7 * scale);
         using var brush = new SolidBrush(fill);
-        using var border = new Pen(Primary && Enabled ? fill : Color.FromArgb(167, 181, 201), scale);
-        e.Graphics.FillPath(brush, shape); e.Graphics.DrawPath(border, shape);
+        using var border = new Pen(Primary && Enabled ? fill : AppTheme.Line, scale);
+        e.Graphics.FillPath(brush, shape);
+        if (!Quiet || Primary) e.Graphics.DrawPath(border, shape);
         var textWidth = TextRenderer.MeasureText(Text, Font, Size.Empty, TextFormatFlags.NoPadding).Width;
-        var iconSize = 21 * scale;
-        var gap = Glyph == UiGlyph.None ? 0 : 11 * scale;
+        var iconSize = 18 * scale;
+        var gap = Glyph == UiGlyph.None ? 0 : 8 * scale;
         var total = textWidth + (Glyph == UiGlyph.None ? 0 : iconSize + gap);
         var start = (Width - total) / 2;
         if (Glyph != UiGlyph.None)
@@ -164,12 +177,24 @@ internal sealed class ModernButton : Button
 
 internal sealed class SurfacePanel : Panel
 {
-    public SurfacePanel() { DoubleBuffered = true; BackColor = Color.White; }
+    public SurfacePanel()
+    {
+        DoubleBuffered = true; BackColor = Color.White;
+        SetStyle(ControlStyles.ResizeRedraw, true);
+    }
+    protected override void OnPaintBackground(PaintEventArgs e)
+    {
+        e.Graphics.Clear(Parent?.BackColor ?? AppTheme.Canvas);
+        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+        using var path = AppTheme.Round(new RectangleF(.5F, .5F, Width - 1, Height - 1), UiMetrics.Radius * DeviceDpi / 96F);
+        using var fill = new SolidBrush(BackColor);
+        e.Graphics.FillPath(fill, path);
+    }
     protected override void OnPaint(PaintEventArgs e)
     {
         base.OnPaint(e);
         e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-        using var path = AppTheme.Round(new RectangleF(.5F, .5F, Width - 1, Height - 1), 10 * DeviceDpi / 96F);
+        using var path = AppTheme.Round(new RectangleF(.5F, .5F, Width - 1, Height - 1), UiMetrics.Radius * DeviceDpi / 96F);
         using var pen = new Pen(AppTheme.Line);
         e.Graphics.DrawPath(pen, path);
     }
@@ -181,11 +206,12 @@ internal sealed class InputSurface : Panel
     public InputSurface(Control editor)
     {
         this.editor = editor;
-        Height = 44;
-        MinimumSize = new Size(100, 44);
+        Height = UiMetrics.ButtonHeight;
+        MinimumSize = new Size(100, UiMetrics.ButtonHeight);
         BackColor = Color.White;
-        Margin = new Padding(0, 0, 0, 14);
+        Margin = new Padding(0, 0, 0, 10);
         DoubleBuffered = true;
+        SetStyle(ControlStyles.ResizeRedraw, true);
         if (editor is TextBox box) box.BorderStyle = BorderStyle.None;
         Controls.Add(editor);
         editor.GotFocus += (_, _) => Invalidate();
@@ -211,73 +237,4 @@ internal sealed class InputSurface : Panel
 internal sealed class Divider : Control
 {
     public Divider() { Height = 1; TabStop = false; BackColor = AppTheme.Line; }
-}
-
-// Keep the real Windows frame, keyboard/system menu, resizing and taskbar identity,
-// but replace the dated title bar with a small, integrated light header.
-internal sealed class WindowHeader : Panel
-{
-    private readonly Form owner;
-    private readonly Label title;
-    private readonly Button minimize;
-    private readonly Button maximize;
-    private readonly Button close;
-    public WindowHeader(Form owner)
-    {
-        this.owner = owner;
-        DoubleBuffered = true; Height = 46; Dock = DockStyle.Top; BackColor = Color.FromArgb(245, 247, 249);
-        var logo = new PictureBox { Name = "TitleBarIcon", Image = AppBranding.Logo, SizeMode = PictureBoxSizeMode.Zoom, Bounds = new Rectangle(16, 9, 28, 28), TabStop = false };
-        title = AppTheme.Label(owner.Text, AppTheme.Caption); title.AutoSize = false;
-        title.TextAlign = ContentAlignment.MiddleLeft;
-        minimize = CaptionButton("—", "Minimize", () => owner.WindowState = FormWindowState.Minimized);
-        maximize = CaptionButton("□", "Maximize or restore", () => owner.WindowState = owner.WindowState == FormWindowState.Maximized ? FormWindowState.Normal : FormWindowState.Maximized);
-        close = CaptionButton("×", "Close", owner.Close);
-        Controls.AddRange([logo, title, minimize, maximize, close]);
-        owner.TextChanged += (_, _) => title.Text = owner.Text;
-        MouseDown += DragWindow; title.MouseDown += DragWindow; logo.MouseDown += DragWindow;
-        DoubleClick += ToggleMaximize; title.DoubleClick += ToggleMaximize;
-    }
-    private Button CaptionButton(string text, string accessibleName, Action action)
-    {
-        var button = new Button { Text = text, AccessibleName = accessibleName, FlatStyle = FlatStyle.Flat, TabStop = false,
-            Font = AppTheme.CaptionSymbol, BackColor = BackColor, ForeColor = AppTheme.Ink, UseVisualStyleBackColor = false };
-        button.FlatAppearance.BorderSize = 0;
-        button.FlatAppearance.MouseOverBackColor = text == "×" ? Color.FromArgb(255, 217, 220) : Color.FromArgb(229, 233, 239);
-        button.Click += (_, _) => action();
-        return button;
-    }
-    protected override void OnLayout(LayoutEventArgs e)
-    {
-        base.OnLayout(e);
-        if (close is null) return;
-        var unit = (int)Math.Round(48 * DeviceDpi / 96F);
-        close.SetBounds(Width - unit, 0, unit, Height);
-        maximize.Visible = owner.MaximizeBox;
-        minimize.Visible = owner.MinimizeBox;
-        var next = Width - unit;
-        if (maximize.Visible) { next -= unit; maximize.SetBounds(next, 0, unit, Height); }
-        if (minimize.Visible) { next -= unit; minimize.SetBounds(next, 0, unit, Height); }
-        var left = (int)Math.Round(57 * DeviceDpi / 96F);
-        title.SetBounds(left, 0, Math.Max(0, next - left), Height);
-    }
-    protected override void OnPaint(PaintEventArgs e) { base.OnPaint(e); using var pen = new Pen(AppTheme.Line); e.Graphics.DrawLine(pen, 0, Height - 1, Width, Height - 1); }
-    private void DragWindow(object? sender, MouseEventArgs e)
-    {
-        if (e.Button != MouseButtons.Left) return;
-        NativeWindowStyle.ReleaseCapture();
-        NativeWindowStyle.SendMessage(owner.Handle, 0x00A1, (IntPtr)2, IntPtr.Zero);
-    }
-    private void ToggleMaximize(object? sender, EventArgs e)
-    {
-        if (owner.MaximizeBox) maximize.PerformClick();
-    }
-}
-
-internal static class NativeWindowStyle
-{
-    [DllImport("user32.dll")] internal static extern bool ReleaseCapture();
-    [DllImport("user32.dll")] internal static extern IntPtr SendMessage(IntPtr window, int message, IntPtr wParam, IntPtr lParam);
-    [DllImport("dwmapi.dll")] internal static extern int DwmSetWindowAttribute(IntPtr window, int attribute, ref int value, int size);
-    [DllImport("dwmapi.dll")] internal static extern int DwmExtendFrameIntoClientArea(IntPtr window, ref Margins margins);
-    [StructLayout(LayoutKind.Sequential)] internal struct Margins { internal int Left, Right, Top, Bottom; }
 }

@@ -2,10 +2,14 @@
 
 ## Priority: refine UI sizing and match the approved design
 
-- [ ] The redesigned UI is sometimes too large and does not yet match the approved mockup closely enough. Refine the window size, spacing, typography, buttons, and list-row heights while preserving the agreed visual style.
-- [ ] Check the main window and dialogs at smaller window sizes, when maximized, and at common Windows display scaling levels. Keep controls proportionate and all text readable without clipping.
+- [x] Compare real RustDesk/RustDeskHop screenshots and replace the handmade title bar (text-symbol caption buttons and padded strip) with native Windows chrome, a matching light caption and compact window sizes. Screenshot-check the dashboard, maximize/restore and both editors at 100%; check native minimize/restore and the right-click system menu. Keep the window theme shared across every form.
+- [x] Rework visual hierarchy after the compact-sizing pass: one primary Connect action, one shared list/action frame, quiet maintenance controls, neutral network badges, consistent spacing tokens and matching framed dialogs.
+- [x] Adopt the approved blue-on-white icon with one editable master (`Assets/RustDeskHop.png`), automatically generated build assets and automatic local shortcut refresh during deployment.
+- [x] Refine the oversized UI while preserving the agreed visual style: smaller default windows, typography, buttons and spacing; text-sized computer rows; bounded dashboard/editor content when maximized; wrapping selected-computer details.
+- [x] Check the main window and network manager at their minimum, default and maximized sizes at 100% Windows scaling; check the compact Add computer dialog. Fix input borders not repainting after resizing. Add regression coverage for layout containment, repeated resizing and long labels.
+- [ ] Verify the main window and dialogs on real 125%, 150% and 200% Windows displays, including moving between monitors with different scaling. Keep all text readable and controls reachable; do not treat 100% screenshots as high-DPI validation.
 
-User feedback recorded on 2026-09-17. This is follow-up work; no UI changes were requested when adding this note.
+User feedback recorded on 2026-09-17 and 2026-09-20. Compact sizing was followed by a separate hierarchy/framing pass on 2026-09-20. Higher-DPI/mixed-monitor validation remains open.
 
 ## Next milestone: tray-first UX
 
@@ -27,7 +31,7 @@ User feedback recorded on 2026-09-17. This is follow-up work; no UI changes were
 
 ## Network profiles
 
-- [x] Make Public and private profiles visually distinct with labeled badges and colors.
+- [x] Identify Public and private profiles with quiet, explicitly labeled badges.
 - [ ] Add a profile status/test button.
 - [ ] Add an “Open Tailscale” action when a private profile is unavailable.
 - [ ] Support importing and exporting profiles and client mappings.
