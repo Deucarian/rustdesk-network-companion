@@ -28,7 +28,7 @@ internal sealed partial class MainForm
         Text = "RustDeskHop";
         StartPosition = FormStartPosition.CenterScreen;
         MinimumSize = new Size(740, 480);
-        ClientSize = new Size(900, 530);
+        ClientSize = new Size(900, 490);
         BuildUi();
         Load += (_, _) =>
         {

@@ -19,7 +19,7 @@ public sealed class ModernUiTests
         Assert.True(Find<ModernButton>(form, "AddComputer").Enabled);
         Assert.Contains(Descendants(form).OfType<Label>(), l => l.Text.Contains("No computers yet"));
         Assert.Empty(form.Controls.Find("ApplicationLogo", true));
-        Assert.Single(form.Controls.Find("TitleBarIcon", true));
+        Assert.Empty(form.Controls.Find("TitleBarIcon", true));
     });
 
     [Fact]
@@ -41,6 +41,7 @@ public sealed class ModernUiTests
 
     [Theory]
     [InlineData(740, 480)]
+    [InlineData(916, 529)]
     [InlineData(900, 530)]
     [InlineData(1440, 940)]
     public void MainActionsFitWithoutOverlapping(int width, int height) => OnSta(() =>
@@ -132,12 +133,13 @@ public sealed class ModernUiTests
                 Assert.True(field.Parent!.ClientRectangle.Contains(field.Bounds), $"Field exceeds editor: {field.Bounds}");
                 Assert.True(field.Height >= 36);
             }
-            var buttons = Descendants(form).OfType<Button>().Where(b => b.AccessibleName is not ("Minimize" or "Maximize or restore" or "Close"));
+            var buttons = Descendants(form).OfType<Button>();
             Assert.All(buttons, b => Assert.IsType<ModernButton>(b));
         }
     });
 
     [Theory]
+    [InlineData(780, 490)]
     [InlineData(780, 530)]
     [InlineData(860, 540)]
     [InlineData(1920, 1040)]

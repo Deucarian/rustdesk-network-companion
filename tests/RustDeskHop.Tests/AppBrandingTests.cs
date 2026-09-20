@@ -67,7 +67,7 @@ public sealed class AppBrandingTests
     }
 
     [Fact]
-    public void HeaderArtworkIsExactlyTheLargestGeneratedWindowsFrame()
+    public void PreviewArtworkIsExactlyTheLargestGeneratedWindowsFrame()
     {
         using var stream = typeof(AppBranding).Assembly.GetManifestResourceStream(AppBranding.IconResourceName)!;
         using var reader = new BinaryReader(stream);
@@ -120,8 +120,8 @@ public sealed class AppBrandingTests
                 Assert.True(form.ShowIcon);
             }
             Assert.Empty(main.Controls.Find("ApplicationLogo", true));
-            var picture = Assert.IsType<PictureBox>(Assert.Single(main.Controls.Find("TitleBarIcon", true)));
-            Assert.Same(AppBranding.Logo, picture.Image);
+            // Windows draws the shared icon in the real caption, not a second bitmap control.
+            Assert.Empty(main.Controls.Find("TitleBarIcon", true));
         });
     }
 

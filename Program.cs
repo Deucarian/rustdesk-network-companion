@@ -532,7 +532,7 @@ internal sealed class TargetEditorForm : BrandedForm
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = false;
-        ClientSize = new Size(500, 290);
+        ClientSize = new Size(500, 250);
 
         WindowContent.Padding = new Padding(UiMetrics.Inset);
         var surface = new SurfacePanel { Dock = DockStyle.Fill, Padding = new Padding(UiMetrics.Inset) };
@@ -610,8 +610,8 @@ internal sealed class ProfilesForm : BrandedForm
         profiles = source.Select(Clone).ToList();
         Text = "Manage networks";
         StartPosition = FormStartPosition.CenterParent;
-        MinimumSize = new Size(780, 530);
-        ClientSize = new Size(860, 500);
+        MinimumSize = new Size(780, 490);
+        ClientSize = new Size(860, 460);
         WindowContent.Padding = new Padding(UiMetrics.SectionGap);
         var surface = new SurfacePanel { Padding = new Padding(UiMetrics.Inset) };
 

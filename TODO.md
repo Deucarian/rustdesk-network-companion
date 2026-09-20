@@ -2,6 +2,7 @@
 
 ## Priority: refine UI sizing and match the approved design
 
+- [x] Compare real RustDesk/RustDeskHop screenshots and replace the handmade title bar (text-symbol caption buttons and padded strip) with native Windows chrome, a matching light caption and compact window sizes. Screenshot-check the dashboard, maximize/restore and both editors at 100%; check native minimize/restore and the right-click system menu. Keep the window theme shared across every form.
 - [x] Rework visual hierarchy after the compact-sizing pass: one primary Connect action, one shared list/action frame, quiet maintenance controls, neutral network badges, consistent spacing tokens and matching framed dialogs.
 - [x] Adopt the approved blue-on-white icon with one editable master (`Assets/RustDeskHop.png`), automatically generated build assets and automatic local shortcut refresh during deployment.
 - [x] Refine the oversized UI while preserving the agreed visual style: smaller default windows, typography, buttons and spacing; text-sized computer rows; bounded dashboard/editor content when maximized; wrapping selected-computer details.
