@@ -15,12 +15,12 @@ internal sealed class PublicSignInForm : BrandedForm
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = false;
-        ClientSize = new Size(680, 410);
+        ClientSize = new Size(580, 340);
 
         var layout = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
-            Padding = new Padding(28),
+            Padding = new Padding(20),
             ColumnCount = 1,
             RowCount = 5,
         };
@@ -42,7 +42,7 @@ internal sealed class PublicSignInForm : BrandedForm
         {
             Text = "In RustDesk, open Settings → Account → Login and choose Google, GitHub, or Microsoft. Complete the browser sign-in yourself. RustDeskHop will notice when it succeeds and continue your saved connection automatically.",
             AutoSize = true,
-            MaximumSize = new Size(610, 0),
+            MaximumSize = new Size(520, 0),
             Margin = new Padding(0, 0, 0, 14),
         });
 

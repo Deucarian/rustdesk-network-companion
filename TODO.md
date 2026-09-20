@@ -2,10 +2,11 @@
 
 ## Priority: refine UI sizing and match the approved design
 
-- [ ] The redesigned UI is sometimes too large and does not yet match the approved mockup closely enough. Refine the window size, spacing, typography, buttons, and list-row heights while preserving the agreed visual style.
-- [ ] Check the main window and dialogs at smaller window sizes, when maximized, and at common Windows display scaling levels. Keep controls proportionate and all text readable without clipping.
+- [x] Refine the oversized UI while preserving the agreed visual style: smaller default windows, typography, buttons and spacing; text-sized computer rows; bounded dashboard/editor content when maximized; wrapping selected-computer details.
+- [x] Check the main window and network manager at their minimum, default and maximized sizes at 100% Windows scaling; check the compact Add computer dialog. Fix input borders not repainting after resizing. Add regression coverage for layout containment, repeated resizing and long labels.
+- [ ] Verify the main window and dialogs on real 125%, 150% and 200% Windows displays, including moving between monitors with different scaling. Keep all text readable and controls reachable; do not treat 100% screenshots as high-DPI validation.
 
-User feedback recorded on 2026-09-17. This is follow-up work; no UI changes were requested when adding this note.
+User feedback recorded on 2026-09-17. Compact-layout implementation and 100% visual checks completed on 2026-09-20. Higher-DPI/mixed-monitor validation remains open.
 
 ## Next milestone: tray-first UX
 

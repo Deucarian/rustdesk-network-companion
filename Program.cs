@@ -532,10 +532,10 @@ internal sealed class TargetEditorForm : BrandedForm
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = false;
-        ClientSize = new Size(570, 360);
+        ClientSize = new Size(500, 290);
 
-        var layout = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(28), ColumnCount = 2, RowCount = 4 };
-        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 130));
+        var layout = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(20), ColumnCount = 2, RowCount = 4 };
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 110));
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         for (var row = 0; row < 3; row++) layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
@@ -549,7 +549,7 @@ internal sealed class TargetEditorForm : BrandedForm
         profileBox.ValueMember = nameof(ServerProfile.Id);
         AddRow(layout, 2, "Network", profileBox);
 
-        var buttons = new FlowLayoutPanel { Dock = DockStyle.Bottom, FlowDirection = FlowDirection.RightToLeft, AutoSize = true, Padding = new Padding(0, 18, 0, 0) };
+        var buttons = new FlowLayoutPanel { Dock = DockStyle.Bottom, FlowDirection = FlowDirection.RightToLeft, AutoSize = true, Padding = new Padding(0, 12, 0, 0) };
         var save = new ModernButton { Text = "Save computer", Primary = true, DialogResult = DialogResult.OK, AutoSize = true };
         save.Click += (_, _) =>
         {
@@ -607,22 +607,20 @@ internal sealed class ProfilesForm : BrandedForm
         profiles = source.Select(Clone).ToList();
         Text = "Manage networks";
         StartPosition = FormStartPosition.CenterParent;
-        MinimumSize = new Size(960, 650);
-        ClientSize = new Size(1040, 684);
-        WindowContent.Padding = new Padding(24);
+        MinimumSize = new Size(780, 530);
+        ClientSize = new Size(860, 540);
+        WindowContent.Padding = new Padding(18);
 
         var split = new SplitContainer
         {
-            Dock = DockStyle.Fill,
             Orientation = Orientation.Vertical,
             FixedPanel = FixedPanel.Panel1,
-            SplitterWidth = 16,
-            Padding = new Padding(24),
+            SplitterWidth = 12,
         };
         split.Size = ClientSize;
-        split.Panel1MinSize = 220;
-        split.Panel2MinSize = 550;
-        split.SplitterDistance = 260;
+        split.Panel1MinSize = 180;
+        split.Panel2MinSize = 500;
+        split.SplitterDistance = 220;
 
         profileList.Dock = DockStyle.Fill;
         profileList.Name = "Networks";
@@ -631,14 +629,14 @@ internal sealed class ProfilesForm : BrandedForm
         profileList.BackColor = Color.White;
         profileList.IntegralHeight = false;
         profileList.DrawMode = DrawMode.OwnerDrawFixed;
-        profileList.ItemHeight = 68;
+        profileList.ItemHeight = 52;
         profileList.DrawItem += (_, e) =>
         {
             if (e.Index < 0) return;
             var selected = (e.State & DrawItemState.Selected) != 0;
             using var background = new SolidBrush(selected ? AppTheme.Selection : Color.White);
             e.Graphics.FillRectangle(background, e.Bounds);
-            var textBounds = Rectangle.Inflate(e.Bounds, -16, -8);
+            var textBounds = Rectangle.Inflate(e.Bounds, -(int)(12 * DeviceDpi / 96F), -(int)(6 * DeviceDpi / 96F));
             TextRenderer.DrawText(e.Graphics, profileList.GetItemText(profileList.Items[e.Index]), Font, textBounds,
                 selected ? AppTheme.Blue : AppTheme.Ink, TextFormatFlags.WordBreak | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
             if ((e.State & DrawItemState.Focus) != 0) e.DrawFocusRectangle();
@@ -650,12 +648,12 @@ internal sealed class ProfilesForm : BrandedForm
         var editor = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
-            Padding = new Padding(16, 10, 12, 10),
+            Padding = new Padding(12, 6, 8, 6),
             ColumnCount = 2,
             RowCount = 8,
             GrowStyle = TableLayoutPanelGrowStyle.FixedSize,
         };
-        editor.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150));
+        editor.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 120));
         editor.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         for (var row = 0; row < 6; row++) editor.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         editor.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
@@ -713,6 +711,13 @@ internal sealed class ProfilesForm : BrandedForm
         split.Panel2.Controls.Add(editor);
 
         WindowContent.Controls.Add(split);
+        WindowContent.Layout += (_, _) =>
+        {
+            var scale = DeviceDpi / 96F;
+            var width = Math.Min((int)(1080 * scale), WindowContent.ClientSize.Width - WindowContent.Padding.Horizontal);
+            var height = Math.Min((int)(500 * scale), WindowContent.ClientSize.Height - WindowContent.Padding.Vertical);
+            split.SetBounds((WindowContent.ClientSize.Width - width) / 2, WindowContent.Padding.Top, width, height);
+        };
         AcceptButton = save;
         CancelButton = close;
         Shown += (_, _) =>

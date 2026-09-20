@@ -27,8 +27,8 @@ internal sealed partial class MainForm
         saveLoadedSettings = initialSettings is null;
         Text = "RustDeskHop";
         StartPosition = FormStartPosition.CenterScreen;
-        MinimumSize = new Size(940, 640);
-        ClientSize = new Size(1040, 684);
+        MinimumSize = new Size(740, 480);
+        ClientSize = new Size(900, 530);
         BuildUi();
         Load += (_, _) =>
         {
@@ -49,6 +49,11 @@ internal sealed partial class MainForm
         var topRule = new Divider();
         var bottomRule = new Divider();
         var card = new SurfacePanel { Name = "ComputersCard", Padding = new Padding(2) };
+        title.Name = "PageTitle"; subtitle.Name = "PageSubtitle";
+        selectedName.Name = "SelectedComputer"; selectedRoute.Name = "SelectedRoute";
+        currentNetworkLabel.Name = "CurrentNetwork"; statusLabel.Name = "Status";
+        title.AutoSize = false; subtitle.AutoSize = false;
+        WindowContent.AutoScroll = true;
         targetsGrid.Dock = DockStyle.Fill;
         card.Controls.Add(targetsGrid);
         emptyState.AutoSize = false; emptyState.TextAlign = ContentAlignment.MiddleCenter;
@@ -63,46 +68,82 @@ internal sealed partial class MainForm
         WindowContent.Controls.AddRange([title, subtitle, profilesButton, addButton, globe, currentNetworkLabel, card,
             topRule, selectedIcon, selectedName, selectedRoute, removeButton, connectButton, bottomRule, info, statusLabel]);
 
+        var layingOut = false;
         WindowContent.Layout += (_, _) =>
         {
-            var scale = DeviceDpi / 96F;
-            int Px(float value) => (int)Math.Round(value * scale);
-            var width = WindowContent.ClientSize.Width;
-            var height = WindowContent.ClientSize.Height;
-            var margin = Px(30);
-            var right = width - margin;
-            title.Location = new Point(margin, Px(25));
-            subtitle.Location = new Point(margin, Px(73));
-            var addWidth = Px(188); var manageWidth = Px(218);
-            addButton.SetBounds(right - addWidth, Px(36), addWidth, Px(46));
-            profilesButton.SetBounds(addButton.Left - Px(14) - manageWidth, Px(36), manageWidth, Px(46));
-            // Keep the title and actions on separate lines on a narrow window.
-            var compact = profilesButton.Left < subtitle.Right + Px(18);
-            var networkY = Px(compact ? 149 : 121);
-            if (compact)
+            if (layingOut) return;
+            layingOut = true;
+            try
             {
-                profilesButton.Top = Px(105); addButton.Top = Px(105);
-                networkY = Px(169);
+                var scale = DeviceDpi / 96F;
+                int Px(float value) => (int)Math.Round(value * scale);
+                int TextHeight(Label label, int width) => TextRenderer.MeasureText(label.Text, label.Font,
+                    new Size(Math.Max(1, width), int.MaxValue), TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix).Height;
+                var viewportWidth = WindowContent.ClientSize.Width;
+                var width = Math.Min(Px(1080), Math.Max(Px(300), viewportWidth - Px(44)));
+                var left = (viewportWidth - width) / 2;
+                var right = left + width;
+                var scroll = WindowContent.AutoScrollPosition;
+                void Place(Control control, int x, int y, int w, int h) =>
+                    control.SetBounds(x + scroll.X, y + scroll.Y, w, h);
+
+                var addSize = addButton.GetPreferredSize(Size.Empty);
+                var manageSize = profilesButton.GetPreferredSize(Size.Empty);
+                var toolbarWidth = addSize.Width + manageSize.Width + Px(10);
+                var titleWidth = title.GetPreferredSize(Size.Empty).Width;
+                var stackedToolbar = titleWidth + toolbarWidth + Px(24) > width;
+                var titleHeight = TextHeight(title, width);
+                var toolbarY = Px(18);
+                Place(title, left, Px(16), stackedToolbar ? width : width - toolbarWidth - Px(24), titleHeight);
+                var subtitleY = Px(16) + Math.Max(titleHeight, stackedToolbar ? 0 : addSize.Height) + Px(6);
+                var subtitleHeight = TextHeight(subtitle, width);
+                Place(subtitle, left, subtitleY, width, subtitleHeight);
+                if (stackedToolbar) toolbarY = subtitleY + subtitleHeight + Px(12);
+                Place(addButton, right - addSize.Width, toolbarY, addSize.Width, addSize.Height);
+                Place(profilesButton, right - toolbarWidth, toolbarY, manageSize.Width, manageSize.Height);
+
+                var networkY = Math.Max(subtitleY + subtitleHeight, toolbarY + addSize.Height) + Px(18);
+                var networkHeight = Math.Max(Px(20), TextHeight(currentNetworkLabel, width - Px(30)));
+                Place(globe, left, networkY, Px(19), Px(19));
+                Place(currentNetworkLabel, left + Px(30), networkY, width - Px(30), networkHeight);
+                var cardTop = networkY + networkHeight + Px(12);
+
+                var connectSize = connectButton.GetPreferredSize(Size.Empty);
+                var removeSize = removeButton.GetPreferredSize(Size.Empty);
+                var actionsWidth = connectSize.Width + removeSize.Width + Px(10);
+                var stackedActions = width - actionsWidth - Px(72) < Px(220);
+                var summaryWidth = width - Px(52) - (stackedActions ? 0 : actionsWidth + Px(20));
+                var nameHeight = TextHeight(selectedName, summaryWidth);
+                var routeHeight = TextHeight(selectedRoute, summaryWidth);
+                var summaryHeight = Math.Max(Px(38), nameHeight + Px(3) + routeHeight);
+                var actionHeight = stackedActions ? summaryHeight + Px(12) + connectSize.Height : Math.Max(summaryHeight, connectSize.Height);
+                var statusHeight = Math.Max(Px(20), TextHeight(statusLabel, width - Px(30)));
+                var belowCard = Px(18 + 16 + 18 + 14 + 20) + actionHeight + statusHeight;
+                // Keep a short list compact, even when maximized. A long list scrolls
+                // inside the card; unusually tall text can scroll the whole dashboard.
+                var availableHeight = WindowContent.ClientSize.Height - cardTop - belowCard;
+                var cardHeight = Math.Clamp(targetsGrid.ContentHeight + card.Padding.Vertical, Px(112), Math.Max(Px(112), availableHeight));
+                Place(card, left, cardTop, width, cardHeight);
+                var ruleY = cardTop + cardHeight + Px(18);
+                Place(topRule, left, ruleY, width, 1);
+                var summaryY = ruleY + Px(16);
+                var actionsY = summaryY + (stackedActions ? summaryHeight + Px(12) : 0);
+                Place(selectedIcon, left + Px(2), summaryY + Px(3), Px(32), Px(32));
+                Place(selectedName, left + Px(52), summaryY, summaryWidth, nameHeight);
+                Place(selectedRoute, left + Px(52), summaryY + nameHeight + Px(3), summaryWidth, routeHeight);
+                Place(connectButton, right - connectSize.Width, actionsY, connectSize.Width, connectSize.Height);
+                Place(removeButton, right - actionsWidth, actionsY, removeSize.Width, removeSize.Height);
+                var footerY = summaryY + actionHeight + Px(18);
+                Place(bottomRule, left, footerY, width, 1);
+                Place(info, left, footerY + Px(14), Px(18), Px(18));
+                Place(statusLabel, left + Px(30), footerY + Px(14), width - Px(30), statusHeight);
+                WindowContent.AutoScrollMinSize = new Size(0, footerY + Px(14) + statusHeight + Px(20));
             }
-            globe.SetBounds(margin + Px(2), networkY, Px(23), Px(23));
-            currentNetworkLabel.SetBounds(margin + Px(42), networkY - Px(2), right - margin - Px(42), Px(28));
-            var cardTop = networkY + Px(46);
-            var cardBottom = height - Px(208);
-            card.SetBounds(margin, cardTop, right - margin, Math.Max(Px(152), cardBottom - cardTop));
-            var ruleY = card.Bottom + Px(24);
-            topRule.SetBounds(margin, ruleY, right - margin, 1);
-            var actionY = ruleY + Px(27);
-            connectButton.SetBounds(right - Px(150), actionY, Px(150), Px(54));
-            removeButton.SetBounds(connectButton.Left - Px(18) - Px(225), actionY + Px(5), Px(225), Px(44));
-            selectedIcon.SetBounds(margin + Px(5), actionY + Px(4), Px(46), Px(46));
-            var summaryX = margin + Px(86);
-            var summaryWidth = Math.Max(Px(120), removeButton.Left - summaryX - Px(20));
-            selectedName.SetBounds(summaryX, actionY - Px(2), summaryWidth, Px(27));
-            selectedRoute.SetBounds(summaryX, actionY + Px(27), summaryWidth, Px(44));
-            bottomRule.SetBounds(margin, height - Px(59), right - margin, 1);
-            info.SetBounds(margin + Px(2), height - Px(35), Px(22), Px(22));
-            statusLabel.SetBounds(margin + Px(46), height - Px(48), right - margin - Px(46), Px(46));
+            finally { layingOut = false; }
         };
+        targetsGrid.ContentHeightChanged += (_, _) => WindowContent.PerformLayout();
+        foreach (var label in new[] { currentNetworkLabel, selectedName, selectedRoute, statusLabel })
+            label.TextChanged += (_, _) => WindowContent.PerformLayout();
         targetsGrid.SelectionChanged += (_, _) => UpdateSelection();
         targetsGrid.CellDoubleClick += async (_, e) => { if (e.RowIndex >= 0) await ConnectSelectedAsync(); };
         targetsGrid.KeyDown += async (_, e) =>
@@ -137,6 +178,9 @@ internal sealed class ComputerGrid : DataGridView
 {
     private bool sizingRows;
     private bool sizingScheduled;
+    private int lastContentHeight;
+    internal int ContentHeight => ColumnHeadersHeight + Rows.Cast<DataGridViewRow>().Sum(row => row.Height);
+    internal event EventHandler? ContentHeightChanged;
     public ComputerGrid()
     {
         DoubleBuffered = true;
@@ -154,8 +198,8 @@ internal sealed class ComputerGrid : DataGridView
         AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
         AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.None;
         ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
-        ColumnHeadersHeight = 52;
-        RowTemplate.MinimumHeight = 64;
+        ColumnHeadersHeight = 40;
+        RowTemplate.MinimumHeight = 52;
         Font = AppTheme.Body;
         DefaultCellStyle = new DataGridViewCellStyle
         {
@@ -194,36 +238,41 @@ internal sealed class ComputerGrid : DataGridView
 
     private void SizeRowsToContent()
     {
-        if (sizingRows || Columns.Count != 3 || Rows.Count == 0) return;
+        if (sizingRows || Columns.Count != 3) return;
         var previousWidth = Columns.Cast<DataGridViewColumn>().Sum(c => c.Width);
         sizingRows = true;
         try
         {
             var scale = DeviceDpi / 96F;
             int Px(float value) => (int)Math.Round(value * scale);
-            var baseHeight = Math.Max(Px(64), Rows.Count <= 3 ? (ClientSize.Height - ColumnHeadersHeight) / 3 : 0);
+            var baseHeight = Px(52);
             foreach (DataGridViewRow gridRow in Rows)
             {
                 if (gridRow.DataBoundItem is not ComputerRow row) continue;
                 var badgeWidth = TextRenderer.MeasureText(row.IsPublic ? "Public" : "Private", AppTheme.Small).Width + Px(18);
                 int Measure(string text, Font font, int width) => TextRenderer.MeasureText(text, font,
                     new Size(Math.Max(Px(40), width), int.MaxValue), TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix).Height;
-                var textHeight = Math.Max(Measure(row.Name, AppTheme.Strong, Columns[0].Width - Px(126)),
-                    Measure(row.ProfileName, Font, Columns[2].Width - Px(48) - badgeWidth));
-                textHeight = Math.Max(textHeight, Measure(row.RustDeskId, Font, Columns[1].Width - Px(40)));
-                gridRow.Height = Math.Max(baseHeight, textHeight + Px(24));
+                var textHeight = Math.Max(Measure(row.Name, AppTheme.Strong, Columns[0].Width - Px(92)),
+                    Measure(row.ProfileName, Font, Columns[2].Width - Px(40) - badgeWidth));
+                textHeight = Math.Max(textHeight, Measure(row.RustDeskId, Font, Columns[1].Width - Px(28)));
+                gridRow.Height = Math.Max(baseHeight, textHeight + Px(20));
             }
         }
         finally { sizingRows = false; }
         if (previousWidth != Columns.Cast<DataGridViewColumn>().Sum(c => c.Width)) ScheduleRowSizing();
+        if (lastContentHeight != ContentHeight)
+        {
+            lastContentHeight = ContentHeight;
+            ContentHeightChanged?.Invoke(this, EventArgs.Empty);
+        }
         Invalidate();
     }
 
     protected override void OnDpiChangedAfterParent(EventArgs e)
     {
         base.OnDpiChangedAfterParent(e);
-        ColumnHeadersHeight = (int)(52 * DeviceDpi / 96F);
-        RowTemplate.MinimumHeight = (int)(64 * DeviceDpi / 96F);
+        ColumnHeadersHeight = (int)(40 * DeviceDpi / 96F);
+        RowTemplate.MinimumHeight = (int)(52 * DeviceDpi / 96F);
         foreach (DataGridViewRow row in Rows) row.MinimumHeight = RowTemplate.MinimumHeight;
         ScheduleRowSizing();
     }
@@ -251,24 +300,24 @@ internal sealed class ComputerGrid : DataGridView
         graphics.FillRectangle(background, bounds);
         if (rowIndex < 0)
         {
-            TextRenderer.DrawText(graphics, text, Font, Rectangle.Inflate(bounds, -Px(20), 0), AppTheme.Muted,
+            TextRenderer.DrawText(graphics, text, Font, Rectangle.Inflate(bounds, -Px(14), 0), AppTheme.Muted,
                 TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
         }
         else
         {
-            var textBounds = Rectangle.Inflate(bounds, -Px(20), -Px(8));
+            var textBounds = Rectangle.Inflate(bounds, -Px(14), -Px(8));
             if (columnIndex == 0)
             {
                 if (selected)
                 {
                     graphics.SmoothingMode = SmoothingMode.AntiAlias;
                     using var blue = new SolidBrush(AppTheme.Blue);
-                    var check = new Rectangle(bounds.Left + Px(22), bounds.Top + (bounds.Height - Px(25)) / 2, Px(25), Px(25));
+                    var check = new Rectangle(bounds.Left + Px(14), bounds.Top + (bounds.Height - Px(20)) / 2, Px(20), Px(20));
                     graphics.FillEllipse(blue, check);
                     GlyphPainter.Draw(graphics, UiGlyph.Check, Rectangle.Inflate(check, -Px(3), -Px(3)), Color.White);
                 }
-                GlyphPainter.Draw(graphics, UiGlyph.Monitor, new Rectangle(bounds.Left + Px(75), bounds.Top + (bounds.Height - Px(26)) / 2, Px(26), Px(26)), AppTheme.Muted);
-                textBounds.X = bounds.Left + Px(116); textBounds.Width = Math.Max(1, bounds.Right - Px(10) - textBounds.Left);
+                GlyphPainter.Draw(graphics, UiGlyph.Monitor, new Rectangle(bounds.Left + Px(49), bounds.Top + (bounds.Height - Px(22)) / 2, Px(22), Px(22)), AppTheme.Muted);
+                textBounds.X = bounds.Left + Px(82); textBounds.Width = Math.Max(1, bounds.Right - Px(10) - textBounds.Left);
             }
             if (columnIndex == 2 && Rows[rowIndex].DataBoundItem is ComputerRow row)
             {
@@ -277,7 +326,7 @@ internal sealed class ComputerGrid : DataGridView
                 var badgeWidth = badgeSize.Width + Px(18);
                 var naturalWidth = TextRenderer.MeasureText(row.ProfileName, Font).Width;
                 var badgeX = Math.Min(bounds.Right - badgeWidth - Px(16), textBounds.Left + naturalWidth + Px(12));
-                var badge = new RectangleF(badgeX, bounds.Top + (bounds.Height - Px(27)) / 2, badgeWidth, Px(27));
+                var badge = new RectangleF(badgeX, bounds.Top + (bounds.Height - Px(24)) / 2, badgeWidth, Px(24));
                 graphics.SmoothingMode = SmoothingMode.AntiAlias;
                 using var shape = AppTheme.Round(badge, Px(14));
                 using var brush = new SolidBrush(row.IsPublic ? Color.FromArgb(211, 229, 255) : Color.FromArgb(237, 236, 246));

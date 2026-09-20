@@ -11,11 +11,11 @@ internal static class AppTheme
     internal static readonly Color Line = Color.FromArgb(224, 229, 236);
     internal static readonly Color Blue = Color.FromArgb(0, 105, 245);
     internal static readonly Color Selection = Color.FromArgb(234, 243, 255);
-    internal static readonly Font Body = new("Segoe UI", 13F);
-    internal static readonly Font Heading = new("Segoe UI Semibold", 24F, FontStyle.Bold);
-    internal static readonly Font Strong = new("Segoe UI Semibold", 13.5F, FontStyle.Bold);
-    internal static readonly Font Small = new("Segoe UI", 11.5F);
-    internal static readonly Font Caption = new("Segoe UI Semibold", 12F);
+    internal static readonly Font Body = new("Segoe UI", 10.5F);
+    internal static readonly Font Heading = new("Segoe UI Semibold", 20F, FontStyle.Bold);
+    internal static readonly Font Strong = new("Segoe UI Semibold", 11F, FontStyle.Bold);
+    internal static readonly Font Small = new("Segoe UI", 9.5F);
+    internal static readonly Font Caption = new("Segoe UI Semibold", 10.5F);
     internal static readonly Font CaptionSymbol = new("Segoe UI", 15F);
 
     internal static GraphicsPath Round(RectangleF bounds, float radius)
@@ -114,14 +114,15 @@ internal sealed class ModernButton : Button
 
     public ModernButton()
     {
-        Font = AppTheme.Body; Cursor = Cursors.Hand; Height = 46; FlatStyle = FlatStyle.Flat;
+        Font = AppTheme.Body; Cursor = Cursors.Hand; Height = 36; FlatStyle = FlatStyle.Flat;
         FlatAppearance.BorderSize = 0; UseVisualStyleBackColor = false;
         SetStyle(ControlStyles.UserPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
-        Margin = new Padding(0, 0, 12, 0);
+        Margin = new Padding(0, 0, 8, 0);
     }
 
     public override Size GetPreferredSize(Size proposedSize) => new(
-        TextRenderer.MeasureText(Text, Font).Width + (Glyph == UiGlyph.None ? 36 : 62), (int)Math.Round(46 * DeviceDpi / 96F));
+        TextRenderer.MeasureText(Text, Font).Width + (int)Math.Round((Glyph == UiGlyph.None ? 28 : 52) * DeviceDpi / 96F),
+        Math.Max((int)Math.Round(36 * DeviceDpi / 96F), Font.Height + (int)Math.Round(12 * DeviceDpi / 96F)));
 
     protected override void OnMouseEnter(EventArgs e) { hover = true; Invalidate(); base.OnMouseEnter(e); }
     protected override void OnMouseLeave(EventArgs e) { hover = false; pressed = false; Invalidate(); base.OnMouseLeave(e); }
@@ -144,8 +145,8 @@ internal sealed class ModernButton : Button
         using var border = new Pen(Primary && Enabled ? fill : Color.FromArgb(167, 181, 201), scale);
         e.Graphics.FillPath(brush, shape); e.Graphics.DrawPath(border, shape);
         var textWidth = TextRenderer.MeasureText(Text, Font, Size.Empty, TextFormatFlags.NoPadding).Width;
-        var iconSize = 21 * scale;
-        var gap = Glyph == UiGlyph.None ? 0 : 11 * scale;
+        var iconSize = 18 * scale;
+        var gap = Glyph == UiGlyph.None ? 0 : 8 * scale;
         var total = textWidth + (Glyph == UiGlyph.None ? 0 : iconSize + gap);
         var start = (Width - total) / 2;
         if (Glyph != UiGlyph.None)
@@ -164,7 +165,11 @@ internal sealed class ModernButton : Button
 
 internal sealed class SurfacePanel : Panel
 {
-    public SurfacePanel() { DoubleBuffered = true; BackColor = Color.White; }
+    public SurfacePanel()
+    {
+        DoubleBuffered = true; BackColor = Color.White;
+        SetStyle(ControlStyles.ResizeRedraw, true);
+    }
     protected override void OnPaint(PaintEventArgs e)
     {
         base.OnPaint(e);
@@ -181,11 +186,12 @@ internal sealed class InputSurface : Panel
     public InputSurface(Control editor)
     {
         this.editor = editor;
-        Height = 44;
-        MinimumSize = new Size(100, 44);
+        Height = 36;
+        MinimumSize = new Size(100, 36);
         BackColor = Color.White;
-        Margin = new Padding(0, 0, 0, 14);
+        Margin = new Padding(0, 0, 0, 10);
         DoubleBuffered = true;
+        SetStyle(ControlStyles.ResizeRedraw, true);
         if (editor is TextBox box) box.BorderStyle = BorderStyle.None;
         Controls.Add(editor);
         editor.GotFocus += (_, _) => Invalidate();
@@ -225,8 +231,8 @@ internal sealed class WindowHeader : Panel
     public WindowHeader(Form owner)
     {
         this.owner = owner;
-        DoubleBuffered = true; Height = 46; Dock = DockStyle.Top; BackColor = Color.FromArgb(245, 247, 249);
-        var logo = new PictureBox { Name = "TitleBarIcon", Image = AppBranding.Logo, SizeMode = PictureBoxSizeMode.Zoom, Bounds = new Rectangle(16, 9, 28, 28), TabStop = false };
+        DoubleBuffered = true; Height = 40; Dock = DockStyle.Top; BackColor = Color.FromArgb(245, 247, 249);
+        var logo = new PictureBox { Name = "TitleBarIcon", Image = AppBranding.Logo, SizeMode = PictureBoxSizeMode.Zoom, Bounds = new Rectangle(14, 8, 24, 24), TabStop = false };
         title = AppTheme.Label(owner.Text, AppTheme.Caption); title.AutoSize = false;
         title.TextAlign = ContentAlignment.MiddleLeft;
         minimize = CaptionButton("—", "Minimize", () => owner.WindowState = FormWindowState.Minimized);
@@ -250,14 +256,14 @@ internal sealed class WindowHeader : Panel
     {
         base.OnLayout(e);
         if (close is null) return;
-        var unit = (int)Math.Round(48 * DeviceDpi / 96F);
+        var unit = (int)Math.Round(44 * DeviceDpi / 96F);
         close.SetBounds(Width - unit, 0, unit, Height);
         maximize.Visible = owner.MaximizeBox;
         minimize.Visible = owner.MinimizeBox;
         var next = Width - unit;
         if (maximize.Visible) { next -= unit; maximize.SetBounds(next, 0, unit, Height); }
         if (minimize.Visible) { next -= unit; minimize.SetBounds(next, 0, unit, Height); }
-        var left = (int)Math.Round(57 * DeviceDpi / 96F);
+        var left = (int)Math.Round(49 * DeviceDpi / 96F);
         title.SetBounds(left, 0, Math.Max(0, next - left), Height);
     }
     protected override void OnPaint(PaintEventArgs e) { base.OnPaint(e); using var pen = new Pen(AppTheme.Line); e.Graphics.DrawLine(pen, 0, Height - 1, Width, Height - 1); }
